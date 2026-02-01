@@ -1,0 +1,5 @@
+{
+  "name": "GestaoFinanceira",
+  "description": "Sistema completo de gestão financeira pessoal com controle mensal, patrimônio, metas e cartões, inspirado no design clean do Airbnb.",
+  "requestFramePermissions": []
+}
