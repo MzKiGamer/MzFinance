@@ -150,38 +150,38 @@ const Reports: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div className="space-y-4 md:space-y-6 animate-in fade-in duration-500 pb-20 px-1">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight">{t('annualReports')}</h1>
-          <p className="text-gray-500 font-medium text-base md:text-lg">{t('consolidatedBalance')}</p>
+          <h1 className="text-lg font-black tracking-tight">{t('annualReports')}</h1>
+          <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">{t('consolidatedBalance')}</p>
         </div>
-        <div className="flex items-center gap-3 no-print">
-          <div className="relative group min-w-[120px]">
-            <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="bg-white border rounded-2xl pl-6 pr-12 py-3.5 font-black shadow-sm outline-none w-full appearance-none hover:border-black transition-colors">
+        <div className="flex items-center gap-2 no-print">
+          <div className="relative group min-w-[100px]">
+            <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="bg-white border rounded-xl pl-4 pr-10 py-2 text-xs font-black shadow-sm outline-none w-full appearance-none hover:border-black transition-colors">
               {['2025', '2026', '2027', '2028'].map(year => <option key={year} value={year}>{year}</option>)}
             </select>
-            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 group-hover:text-black" size={18} />
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 group-hover:text-black" size={14} />
           </div>
 
           <div className="relative">
             <button 
               onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
-              className="flex items-center gap-2 bg-black text-white px-6 py-3.5 rounded-2xl font-black shadow-md hover:bg-gray-800 transition-all active:scale-95 whitespace-nowrap"
+              className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-tight shadow-sm hover:bg-gray-800 transition-all active:scale-95 whitespace-nowrap"
             >
-              <Download size={18} />
+              <Download size={14} />
               <span>{t('exportAll')}</span>
             </button>
 
             {isExportMenuOpen && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setIsExportMenuOpen(false)} />
-                <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 py-3 z-20">
-                  <button onClick={handleExportPDF} className="w-full flex items-center gap-3 px-5 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors">
-                    <FileText size={18} className="text-red-500" /> {t('fullPDF')}
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-2xl border border-gray-100 py-1.5 z-20">
+                  <button onClick={handleExportPDF} className="w-full flex items-center gap-2 px-4 py-2.5 text-[10px] font-black uppercase text-gray-700 hover:bg-gray-50 transition-colors">
+                    <FileText size={14} className="text-red-500" /> {t('fullPDF')}
                   </button>
-                  <button onClick={handleExportExcel} className="w-full flex items-center gap-3 px-5 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors">
-                    <TableIcon size={18} className="text-green-600" /> {t('fullExcel')}
+                  <button onClick={handleExportExcel} className="w-full flex items-center gap-2 px-4 py-2.5 text-[10px] font-black uppercase text-gray-700 hover:bg-gray-50 transition-colors">
+                    <TableIcon size={14} className="text-green-600" /> {t('fullExcel')}
                   </button>
                 </div>
               </>
@@ -190,63 +190,63 @@ const Reports: React.FC = () => {
         </div>
       </header>
 
-      <div className="airbnb-card p-8 md:p-10">
-        <h3 className="font-black mb-6 text-gray-800 text-lg uppercase tracking-wider">{t('thermometer')} {selectedYear}</h3>
-        <div className="w-full bg-gray-100 h-8 rounded-full overflow-hidden mb-8 shadow-inner">
+      <div className="airbnb-card p-5 md:p-6">
+        <h3 className="font-black mb-4 text-gray-400 text-[10px] uppercase tracking-widest">{t('thermometer')} {selectedYear}</h3>
+        <div className="w-full bg-gray-50 h-4 rounded-full overflow-hidden mb-6 shadow-inner border border-gray-100">
             <div className={`h-full transition-all duration-1000 ${totals.ratio <= 80 ? 'bg-green-500' : totals.ratio <= 100 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${Math.min(totals.ratio, 100)}%` }} />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="p-4 bg-green-50/30 rounded-2xl border border-green-50">
-              <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest block mb-1">{t('revenues')}</span>
-              <span className="block font-black text-2xl text-green-600">{formatCurrency(totals.res)}</span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-3 bg-green-50/20 rounded-xl border border-green-50">
+              <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">{t('revenues')}</span>
+              <span className="block font-black text-base text-green-600">{formatCurrency(totals.res)}</span>
             </div>
-            <div className="p-4 bg-red-50/30 rounded-2xl border border-red-50">
-              <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest block mb-1">{t('expenses')}</span>
-              <span className="block font-black text-2xl text-red-600">{formatCurrency(totals.exp)}</span>
+            <div className="p-3 bg-red-50/20 rounded-xl border border-red-50">
+              <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">{t('expenses')}</span>
+              <span className="block font-black text-base text-red-600">{formatCurrency(totals.exp)}</span>
             </div>
-            <div className="p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
-              <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest block mb-1">{t('netBalance')}</span>
-              <span className={`block font-black text-2xl ${getValueColor(totals.balance)}`}>{formatCurrency(totals.balance)}</span>
+            <div className="p-3 bg-gray-50/50 rounded-xl border border-gray-100">
+              <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">{t('netBalance')}</span>
+              <span className={`block font-black text-base ${getValueColor(totals.balance)}`}>{formatCurrency(totals.balance)}</span>
             </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-10">
-        <div className="airbnb-card p-6 md:p-8">
-            <div className="flex items-center justify-between mb-8">
-                <h3 className="font-extrabold text-xl">{t('annualEvolution')}</h3>
-                <TrendingUp size={20} className="text-gray-300" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        <div className="airbnb-card p-4 md:p-5">
+            <div className="flex items-center justify-between mb-6">
+                <h3 className="font-black text-xs uppercase tracking-tight">{t('annualEvolution')}</h3>
+                <TrendingUp size={16} className="text-gray-300" />
             </div>
-            <div className="h-80 w-full">
+            <div className="h-64 w-full">
                 {isClient && (
                   <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={annualData} key={language}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F0F0F0" />
-                          <XAxis dataKey="shortName" axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
-                          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
-                          <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }} />
-                          <Legend verticalAlign="top" height={40} />
-                          <Line name={t('revenues')} type="monotone" dataKey="receitas" stroke="#10b981" strokeWidth={4} dot={false} />
-                          <Line name={t('expenses')} type="monotone" dataKey="despesas" stroke="#FF385C" strokeWidth={4} dot={false} />
+                          <XAxis dataKey="shortName" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 700 }} />
+                          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9 }} />
+                          <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 20px rgba(0,0,0,0.05)', fontSize: '10px' }} />
+                          <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 'bold' }} />
+                          <Line name={t('revenues')} type="monotone" dataKey="receitas" stroke="#10b981" strokeWidth={3} dot={false} />
+                          <Line name={t('expenses')} type="monotone" dataKey="despesas" stroke="#FF385C" strokeWidth={3} dot={false} />
                       </LineChart>
                   </ResponsiveContainer>
                 )}
             </div>
         </div>
-        <div className="airbnb-card p-6 md:p-8">
-            <div className="flex items-center justify-between mb-8">
-                <h3 className="font-extrabold text-xl">{t('balanceByMonth')}</h3>
-                <TrendingDown size={20} className="text-gray-300 rotate-180" />
+        <div className="airbnb-card p-4 md:p-5">
+            <div className="flex items-center justify-between mb-6">
+                <h3 className="font-black text-xs uppercase tracking-tight">{t('balanceByMonth')}</h3>
+                <TrendingDown size={16} className="text-gray-300 rotate-180" />
             </div>
-            <div className="h-80 w-full">
+            <div className="h-64 w-full">
                 {isClient && (
                   <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={annualData} key={language}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F0F0F0" />
-                          <XAxis dataKey="shortName" axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
-                          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
-                          <Tooltip cursor={{fill: '#F9F9F9'}} contentStyle={{ borderRadius: '16px', border: 'none' }} />
-                          <Bar name={t('netBalance')} dataKey="saldo" fill="#6366f1" radius={[6, 6, 0, 0]} />
+                          <XAxis dataKey="shortName" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 700 }} />
+                          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9 }} />
+                          <Tooltip cursor={{fill: '#F9F9F9'}} contentStyle={{ borderRadius: '12px', border: 'none', fontSize: '10px' }} />
+                          <Bar name={t('netBalance')} dataKey="saldo" fill="#6366f1" radius={[4, 4, 0, 0]} />
                       </BarChart>
                   </ResponsiveContainer>
                 )}
@@ -255,21 +255,21 @@ const Reports: React.FC = () => {
       </div>
 
       <div className="airbnb-card overflow-hidden">
-        <div className="p-6 md:p-8 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="font-black text-xl tracking-tight">{t('consolidatedTable')} {selectedYear}</h3>
+        <div className="p-4 md:p-6 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="font-black text-sm uppercase tracking-tight">{t('consolidatedTable')} {selectedYear}</h3>
         </div>
         <div className="overflow-x-auto">
             <table className="w-full text-left">
-                <thead className="bg-gray-50 text-[11px] font-black text-gray-400 uppercase tracking-widest">
-                    <tr><th className="px-8 py-6">{t('monthly')}</th><th className="px-8 py-6 text-right">{t('revenues')}</th><th className="px-8 py-6 text-right">{t('expenses')}</th><th className="px-8 py-6 text-right">{t('netBalance')}</th></tr>
+                <thead className="bg-gray-50 text-[8px] font-black text-gray-400 uppercase tracking-widest">
+                    <tr><th className="px-6 py-4">{t('monthly')}</th><th className="px-6 py-4 text-right">{t('revenues')}</th><th className="px-6 py-4 text-right">{t('expenses')}</th><th className="px-6 py-4 text-right">{t('netBalance')}</th></tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 text-base">
+                <tbody className="divide-y divide-gray-50 text-xs">
                     {annualData.map(row => (
-                        <tr key={row.name} className="hover:bg-gray-50/50 transition-colors">
-                            <td className="px-8 py-6 font-bold">{row.name}</td>
-                            <td className="px-8 py-6 text-right text-green-600 font-bold">{formatCurrency(row.receitas)}</td>
-                            <td className="px-8 py-6 text-right text-red-600 font-bold">{formatCurrency(row.despesas)}</td>
-                            <td className={`px-8 py-6 text-right font-black ${getValueColor(row.saldo)}`}>{formatCurrency(row.saldo)}</td>
+                        <tr key={row.name} className="hover:bg-gray-50/30 transition-colors">
+                            <td className="px-6 py-4 font-black text-gray-700">{row.name}</td>
+                            <td className="px-6 py-4 text-right text-green-600 font-black">{formatCurrency(row.receitas)}</td>
+                            <td className="px-6 py-4 text-right text-red-600 font-black">{formatCurrency(row.despesas)}</td>
+                            <td className={`px-6 py-4 text-right font-black ${getValueColor(row.saldo)}`}>{formatCurrency(row.saldo)}</td>
                         </tr>
                     ))}
                 </tbody>

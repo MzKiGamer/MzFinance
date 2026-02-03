@@ -55,59 +55,59 @@ const Goals: React.FC = () => {
   };
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-        <div className="flex items-center gap-5">
-          <div className="w-16 h-16 bg-[#FFF2F5] rounded-full flex items-center justify-center text-[#FF385C] shadow-sm">
-            <Trophy size={32} />
+    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700 max-w-[1200px] mx-auto px-1">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-[#FFF2F5] rounded-full flex items-center justify-center text-[#FF385C] shadow-sm shrink-0">
+            <Trophy size={20} />
           </div>
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight">{t('myGoals')}</h1>
-            <p className="text-gray-500 font-medium">{t('trackProgress')}</p>
+            <h1 className="text-lg font-black tracking-tight">{t('myGoals')}</h1>
+            <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">{t('trackProgress')}</p>
           </div>
         </div>
         <button 
           onClick={() => { setEditingGoal(null); setSelectedIcon('🎯'); setIsAdding(true); }}
-          className="bg-[#FF385C] text-white px-8 py-3 rounded-2xl font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-md active:scale-95 w-full sm:w-auto justify-center"
+          className="bg-[#FF385C] text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-tight flex items-center gap-2 hover:opacity-90 transition-all shadow-sm active:scale-95 w-full sm:w-auto justify-center"
         >
-          <Plus size={20} /> {t('newGoal')}
+          <Plus size={16} /> {t('newGoal')}
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {goalsCalculated.map(goal => {
           const percent = goal.targetValue > 0 ? Math.min((goal.actual / goal.targetValue) * 100, 100) : 0;
           return (
-            <div key={goal.id} className="airbnb-card p-8 group relative overflow-hidden transition-all hover:-translate-y-1">
-              <div className="flex items-center justify-between mb-6">
+            <div key={goal.id} className="airbnb-card p-5 group relative overflow-hidden transition-all hover:scale-[1.01]">
+              <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">{goal.icon || '🎯'}</span>
-                  <h3 className="text-xl font-extrabold text-gray-800 truncate pr-2 max-w-[150px]">{goal.name}</h3>
+                  <span className="text-xl">{goal.icon || '🎯'}</span>
+                  <h3 className="text-sm font-black text-gray-800 truncate pr-2 max-w-[120px]">{goal.name}</h3>
                 </div>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => handleEdit(goal)} className="p-2 text-gray-300 hover:text-black transition-colors"><Pencil size={18} /></button>
-                  <button onClick={() => setGoals(prev => prev.filter(g => g.id !== goal.id))} className="p-2 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
+                  <button onClick={() => handleEdit(goal)} className="p-1.5 text-gray-200 hover:text-black transition-colors"><Pencil size={14} /></button>
+                  <button onClick={() => setGoals(prev => prev.filter(g => g.id !== goal.id))} className="p-1.5 text-gray-200 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
                 </div>
               </div>
 
-              <div className="space-y-6">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">{t('progress')}</span>
-                  <span className="font-extrabold text-gray-800">{percent.toFixed(1)}%</span>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest">
+                  <span className="text-gray-400">{t('progress')}</span>
+                  <span className="text-gray-800">{percent.toFixed(1)}%</span>
                 </div>
                 
-                <div className="w-full h-2.5 bg-[#F7F7F7] rounded-full overflow-hidden">
+                <div className="w-full h-1.5 bg-gray-50 rounded-full overflow-hidden border border-gray-100">
                   <div className="h-full bg-[#FF385C] rounded-full transition-all duration-1000" style={{ width: `${percent}%` }} />
                 </div>
 
-                <div className="flex justify-between items-end pt-4">
+                <div className="flex justify-between items-end pt-2 border-t border-gray-50">
                   <div>
-                    <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-1">{t('saved')}</span>
-                    <span className="text-2xl font-black text-[#10b981]">{formatCurrency(goal.actual)}</span>
+                    <span className="text-[8px] font-black uppercase text-gray-400 tracking-widest block mb-0.5">{t('saved')}</span>
+                    <span className="text-sm font-black text-[#10b981]">{formatCurrency(goal.actual)}</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-1">{t('target')}</span>
-                    <span className="text-sm font-bold text-gray-800">{formatCurrency(goal.targetValue)}</span>
+                    <span className="text-[8px] font-black uppercase text-gray-400 tracking-widest block mb-0.5">{t('target')}</span>
+                    <span className="text-[10px] font-bold text-gray-400">{formatCurrency(goal.targetValue)}</span>
                   </div>
                 </div>
               </div>
@@ -116,33 +116,33 @@ const Goals: React.FC = () => {
         })}
 
         {goalsCalculated.length === 0 && (
-          <div className="md:col-span-2 lg:col-span-3 py-20 text-center flex flex-col items-center gap-4 bg-gray-50/50 rounded-[40px] border-2 border-dashed border-gray-100">
-             <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-gray-200 shadow-sm"><Trophy size={32} /></div>
-             <p className="text-gray-300 font-bold italic">{t('noGoals')}</p>
+          <div className="md:col-span-2 lg:col-span-3 py-16 text-center flex flex-col items-center gap-2 bg-gray-50/50 rounded-[24px] border-2 border-dashed border-gray-100">
+             <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-gray-100 shadow-sm"><Trophy size={24} /></div>
+             <p className="text-gray-300 font-bold italic text-[10px] uppercase tracking-widest">{t('noGoals')}</p>
           </div>
         )}
       </div>
 
       {isAdding && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white rounded-[32px] w-full max-w-lg p-10 animate-in zoom-in duration-300 shadow-2xl relative my-auto">
-            <button onClick={() => { setIsAdding(false); setEditingGoal(null); }} className="absolute right-6 top-6 p-2 hover:bg-gray-100 rounded-full text-gray-400"><X size={20} /></button>
-            <h2 className="text-2xl font-black mb-8 tracking-tight">{editingGoal ? t('edit') : t('newGoal')}</h2>
-            <form onSubmit={handleSaveGoal} className="space-y-6">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('goalName')}</label>
-                <input name="name" defaultValue={editingGoal?.name || ""} required className="font-bold text-lg" />
+          <div className="bg-white rounded-[24px] w-full max-w-sm p-6 md:p-8 animate-in zoom-in duration-300 shadow-2xl relative my-auto">
+            <button onClick={() => { setIsAdding(false); setEditingGoal(null); }} className="absolute right-5 top-5 p-1.5 hover:bg-gray-100 rounded-full text-gray-400"><X size={18} /></button>
+            <h2 className="text-lg font-black mb-6 tracking-tight">{editingGoal ? t('edit') : t('newGoal')}</h2>
+            <form onSubmit={handleSaveGoal} className="space-y-4">
+              <div className="space-y-0.5">
+                <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('goalName')}</label>
+                <input name="name" defaultValue={editingGoal?.name || ""} required className="font-bold text-xs py-1.5 px-3" />
               </div>
               
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Ícone</label>
-                <div className="flex flex-wrap gap-2 max-h-[140px] overflow-y-auto p-4 bg-gray-50 rounded-2xl">
+              <div className="space-y-1">
+                <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Ícone</label>
+                <div className="flex flex-wrap gap-1 max-h-[100px] overflow-y-auto p-2 bg-gray-50 rounded-xl">
                   {SYMBOLS.map(icon => (
                     <button 
                       key={icon} 
                       type="button" 
                       onClick={() => setSelectedIcon(icon)}
-                      className={`w-11 h-11 flex items-center justify-center rounded-xl text-xl transition-all ${selectedIcon === icon ? 'bg-black text-white shadow-lg scale-110' : 'bg-white hover:bg-gray-200 shadow-sm'}`}
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm transition-all ${selectedIcon === icon ? 'bg-black text-white shadow-md' : 'bg-white hover:bg-gray-200 shadow-xs'}`}
                     >
                       {icon}
                     </button>
@@ -150,12 +150,12 @@ const Goals: React.FC = () => {
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('targetValue')}</label>
-                <input name="targetValue" type="number" step="0.01" defaultValue={editingGoal?.targetValue || ""} required className="font-bold text-lg" />
+              <div className="space-y-0.5">
+                <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('targetValue')}</label>
+                <input name="targetValue" type="number" step="0.01" defaultValue={editingGoal?.targetValue || ""} required className="font-black text-xs py-1.5 px-3" />
               </div>
               
-              <button type="submit" className="primary-btn w-full py-4 text-lg shadow-xl shadow-red-100 mt-4">{t('save')}</button>
+              <button type="submit" className="primary-btn w-full py-3 text-xs shadow-sm mt-3">{t('save')}</button>
             </form>
           </div>
         </div>

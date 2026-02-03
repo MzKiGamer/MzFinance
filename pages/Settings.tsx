@@ -145,42 +145,37 @@ const Settings: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 md:space-y-10 animate-in fade-in duration-500 pb-24 md:pb-20 max-w-[1000px] mx-auto px-1 md:px-0">
+    <div className="space-y-4 md:space-y-6 animate-in fade-in duration-500 pb-24 md:pb-20 max-w-[1000px] mx-auto px-1">
       <header>
-        <h1 className="text-3xl md:text-4xl font-black tracking-tight">{t('settings')}</h1>
-        <p className="text-gray-500 font-medium text-base md:text-lg">{t('personalizeStructure')}</p>
+        <h1 className="text-lg font-black tracking-tight">{t('settings')}</h1>
+        <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">{t('personalizeStructure')}</p>
       </header>
 
       {!canManage && (
-        <div className="bg-amber-50 border border-amber-200 p-5 rounded-2xl flex items-center gap-4 text-amber-700 font-bold text-sm">
-          <Lock size={20} className="shrink-0" /> {t('noManagePerm')}
+        <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl flex items-center gap-3 text-amber-700 font-bold text-[10px] uppercase">
+          <Lock size={14} className="shrink-0" /> {t('noManagePerm')}
         </div>
       )}
 
-      <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar">
-        <button 
-          onClick={() => setActiveTab('categories')} 
-          className={`whitespace-nowrap flex items-center gap-3 px-8 py-4 rounded-full text-sm font-bold border transition-all ${activeTab === 'categories' ? 'bg-black text-white' : 'bg-white text-gray-400'}`}
-        >
-          <Tag size={16} /> {t('categories')}
-        </button>
-        <button 
-          onClick={() => setActiveTab('fixed')} 
-          className={`whitespace-nowrap flex items-center gap-3 px-8 py-4 rounded-full text-sm font-bold border transition-all ${activeTab === 'fixed' ? 'bg-black text-white' : 'bg-white text-gray-400'}`}
-        >
-          <Repeat size={16} /> {t('fixed')}
-        </button>
-        <button 
-          onClick={() => setActiveTab('cards')} 
-          className={`whitespace-nowrap flex items-center gap-3 px-8 py-4 rounded-full text-sm font-bold border transition-all ${activeTab === 'cards' ? 'bg-black text-white' : 'bg-white text-gray-400'}`}
-        >
-          <CreditCard size={16} /> {t('cards')}
-        </button>
+      <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+        {[
+          { id: 'categories', icon: <Tag size={14} />, label: t('categories') },
+          { id: 'fixed', icon: <Repeat size={14} />, label: t('fixed') },
+          { id: 'cards', icon: <CreditCard size={14} />, label: t('cards') }
+        ].map(tab => (
+          <button 
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)} 
+            className={`whitespace-nowrap flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-tight border transition-all ${activeTab === tab.id ? 'bg-black text-white' : 'bg-white text-gray-400'}`}
+          >
+            {tab.icon} {tab.label}
+          </button>
+        ))}
       </div>
 
-      <div className="airbnb-card p-6 md:p-10 min-h-[500px] relative">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
-          <h2 className="text-xl md:text-2xl font-extrabold">{t(activeTab === 'fixed' ? 'fixedEntriesTitle' : activeTab)}</h2>
+      <div className="airbnb-card p-5 md:p-8 min-h-[400px] relative">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+          <h2 className="text-sm font-black uppercase tracking-tight">{t(activeTab === 'fixed' ? 'fixedEntriesTitle' : activeTab)}</h2>
           {canManage && (
             <button 
               onClick={() => {
@@ -188,85 +183,79 @@ const Settings: React.FC = () => {
                 else if (activeTab === 'cards') openCardModal();
                 else openCategoryModal();
               }} 
-              className="primary-btn flex items-center gap-2 text-sm py-3 px-6"
+              className="primary-btn flex items-center gap-2 py-2 px-4 shadow-sm"
             >
-              <Plus size={16} /> {t('new')}
+              <Plus size={14} /> <span className="text-[10px] uppercase">{t('new')}</span>
             </button>
           )}
         </div>
 
-        <div className="grid grid-cols-1 gap-6">
+        <div className="grid grid-cols-1 gap-3">
           {activeTab === 'categories' && categories.map(cat => (
-            <div key={cat.id} className="flex items-center justify-between p-5 bg-gray-50 rounded-2xl group hover:bg-gray-100 transition-colors">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-2xl shadow-sm">{cat.icon}</div>
+            <div key={cat.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl group transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-lg shadow-xs border border-gray-100">{cat.icon}</div>
                 <div>
-                  <h4 className="font-bold text-gray-800">{cat.name}</h4>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">{cat.subcategories}</p>
+                  <h4 className="font-black text-xs text-gray-800">{cat.name}</h4>
+                  <p className="text-[8px] text-gray-400 font-bold uppercase tracking-tight truncate max-w-[200px]">{cat.subcategories}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => openCategoryModal(cat)} className="text-gray-200 hover:text-black transition-colors p-2.5"><Pencil size={20} /></button>
-                <button onClick={() => setCategories(prev => prev.filter(c => c.id !== cat.id))} className="text-gray-200 hover:text-red-500 transition-colors p-2.5"><Trash2 size={20} /></button>
+              <div className="flex items-center gap-1">
+                <button onClick={() => openCategoryModal(cat)} className="text-gray-200 hover:text-black transition-colors p-1.5"><Pencil size={16} /></button>
+                <button onClick={() => setCategories(prev => prev.filter(c => c.id !== cat.id))} className="text-gray-200 hover:text-red-500 transition-colors p-1.5"><Trash2 size={16} /></button>
               </div>
             </div>
           ))}
 
           {activeTab === 'cards' && cards.map(card => (
             <div key={card.id} 
-              className="relative overflow-hidden p-6 rounded-[28px] group transition-all hover:scale-[1.01] shadow-lg border border-transparent min-h-[130px] flex flex-col justify-between"
+              className="relative overflow-hidden p-4 rounded-2xl group transition-all hover:scale-[1.01] shadow-md border border-transparent min-h-[100px] flex flex-col justify-between"
               style={{ backgroundColor: card.color }}
             >
-              {/* Elementos decorativos suavizados */}
-              <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/5 rounded-full blur-2xl pointer-events-none" />
-              <div className="absolute -left-8 -bottom-8 w-24 h-24 bg-black/5 rounded-full blur-xl pointer-events-none" />
-
-              <div className="relative z-10 flex items-start justify-between gap-4">
+              <div className="relative z-10 flex items-start justify-between gap-3">
                 <div className="flex-1">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/20 backdrop-blur-md border border-white/20 text-white shrink-0">
-                      <CardIcon size={20} />
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/20 backdrop-blur-md border border-white/20 text-white shrink-0">
+                      <CardIcon size={16} />
                     </div>
                     <div className="min-w-0">
-                      <h4 className="font-black text-xl leading-tight text-white truncate">{card.name}</h4>
-                      <p className="text-[9px] text-white/60 font-black uppercase tracking-[0.2em] truncate">{card.bank}</p>
+                      <h4 className="font-black text-sm leading-tight text-white truncate">{card.name}</h4>
+                      <p className="text-[7px] text-white/60 font-black uppercase tracking-[0.2em] truncate">{card.bank}</p>
                     </div>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md p-1 rounded-xl border border-white/10">
-                  <button onClick={() => openCardModal(card)} className="text-white hover:text-black transition-all p-2 rounded-lg hover:bg-white"><Pencil size={16} /></button>
-                  <button onClick={() => setCards(prev => prev.filter(c => c.id !== card.id))} className="text-white hover:text-red-500 transition-all p-2 rounded-lg hover:bg-white"><Trash2 size={16} /></button>
+                <div className="flex items-center gap-1 bg-white/10 backdrop-blur-md p-0.5 rounded-lg">
+                  <button onClick={() => openCardModal(card)} className="text-white hover:text-black transition-all p-1.5 rounded-md hover:bg-white"><Pencil size={12} /></button>
+                  <button onClick={() => setCards(prev => prev.filter(c => c.id !== card.id))} className="text-white hover:text-red-500 transition-all p-1.5 rounded-md hover:bg-white"><Trash2 size={12} /></button>
                 </div>
               </div>
-
-              <div className="relative z-10 flex flex-row items-end justify-between gap-4 mt-6 pt-4 border-t border-white/10">
+              <div className="relative z-10 flex flex-row items-end justify-between gap-4 mt-4 pt-3 border-t border-white/10">
                 <div>
-                   <span className="text-[9px] font-black uppercase text-white/50 tracking-widest block mb-0.5">Limite</span>
-                   <span className="text-lg font-black text-white">{formatCurrency(card.limit)}</span>
+                   <span className="text-[7px] font-black uppercase text-white/50 tracking-widest block mb-0.5">Limite</span>
+                   <span className="text-xs font-black text-white">{formatCurrency(card.limit)}</span>
                 </div>
                 <div className="text-right">
-                   <span className="text-[9px] font-black uppercase text-white/50 tracking-widest block mb-0.5">Fechamento</span>
-                   <span className="text-sm font-black text-white">Dia {card.closingDay}</span>
+                   <span className="text-[7px] font-black uppercase text-white/50 tracking-widest block mb-0.5">Fatura</span>
+                   <span className="text-[9px] font-black text-white">Dia {card.closingDay}</span>
                 </div>
               </div>
             </div>
           ))}
           
           {activeTab === 'fixed' && fixedEntries.map(fixed => (
-             <div key={fixed.id} className="flex items-center justify-between p-5 bg-gray-50 rounded-2xl group hover:bg-gray-100 transition-colors">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-lg shadow-sm font-bold">
+             <div key={fixed.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl group transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-xs shadow-xs border border-gray-100 font-black">
                   {fixed.day}
                 </div>
                 <div>
-                  <h4 className="font-bold text-gray-800">{fixed.description}</h4>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">{t(fixed.paymentMethod)} • {t(fixed.type === 'Receita' ? 'revenues' : 'expenses')}</p>
+                  <h4 className="font-black text-xs text-gray-800">{fixed.description}</h4>
+                  <p className="text-[8px] text-gray-400 font-bold uppercase tracking-tight">{t(fixed.paymentMethod)} • {t(fixed.type === 'Receita' ? 'revenues' : 'expenses')}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => openFixedModal(fixed)} className="text-gray-200 hover:text-black transition-colors p-2.5"><Pencil size={20} /></button>
-                <button onClick={() => setFixedEntries(prev => prev.filter(f => f.id !== fixed.id))} className="text-gray-200 hover:text-red-500 transition-colors p-2.5"><Trash2 size={20} /></button>
+              <div className="flex items-center gap-1">
+                <button onClick={() => openFixedModal(fixed)} className="text-gray-200 hover:text-black transition-colors p-1.5"><Pencil size={16} /></button>
+                <button onClick={() => setFixedEntries(prev => prev.filter(f => f.id !== fixed.id))} className="text-gray-200 hover:text-red-500 transition-colors p-1.5"><Trash2 size={16} /></button>
               </div>
             </div>
           ))}
@@ -275,137 +264,129 @@ const Settings: React.FC = () => {
 
       {isAdding && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white rounded-[40px] w-full max-w-xl p-12 shadow-2xl animate-in zoom-in duration-300 relative my-auto">
-            <button onClick={() => { setIsAdding(false); setEditingCategory(null); setEditingCard(null); setEditingFixed(null); }} className="absolute right-8 top-8 p-2 hover:bg-gray-100 rounded-full text-gray-400"><X size={24} /></button>
-            <h2 className="text-2xl font-black mb-8">{t('save')}</h2>
+          <div className="bg-white rounded-[24px] w-full max-w-sm p-8 shadow-2xl animate-in zoom-in duration-300 relative my-auto">
+            <button onClick={() => { setIsAdding(false); setEditingCategory(null); setEditingCard(null); setEditingFixed(null); }} className="absolute right-5 top-5 p-1.5 hover:bg-gray-100 rounded-full text-gray-400"><X size={20} /></button>
+            <h2 className="text-sm font-black mb-6 uppercase tracking-tight">{t('save')}</h2>
 
             {activeTab === 'categories' && (
-              <form onSubmit={handleSaveCategory} className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('category')}</label>
-                  <input name="name" required defaultValue={editingCategory?.name || ""} className="font-bold text-base" />
+              <form onSubmit={handleSaveCategory} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('category')}</label>
+                  <input name="name" required defaultValue={editingCategory?.name || ""} className="font-bold text-xs py-1.5 px-3" />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('description')}</label>
-                  <input name="subcategories" required defaultValue={editingCategory?.subcategories || ""} className="font-bold text-base" />
+                <div className="space-y-1">
+                  <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('description')}</label>
+                  <input name="subcategories" required defaultValue={editingCategory?.subcategories || ""} className="font-bold text-xs py-1.5 px-3" />
                 </div>
-                
-                <div className="space-y-2">
-                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Icone</label>
-                  <div className="flex flex-wrap gap-2 max-h-[120px] overflow-y-auto p-4 bg-gray-50 rounded-2xl">
+                <div className="space-y-1">
+                  <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Icone</label>
+                  <div className="flex flex-wrap gap-1 max-h-[80px] overflow-y-auto p-2 bg-gray-50 rounded-lg">
                     {EMOJIS.map(e => (
                       <button 
                         key={e} 
                         type="button" 
                         onClick={() => setSelectedIcon(e)}
-                        className={`w-10 h-10 flex items-center justify-center rounded-lg text-lg ${selectedIcon === e ? 'bg-black text-white' : 'bg-white hover:bg-gray-200'}`}
+                        className={`w-8 h-8 flex items-center justify-center rounded-md text-xs transition-all ${selectedIcon === e ? 'bg-black text-white' : 'bg-white hover:bg-gray-200'}`}
                       >
                         {e}
                       </button>
                     ))}
                   </div>
                 </div>
-
-                <button type="submit" className="primary-btn w-full py-5 text-xl mt-6">{t('save')}</button>
+                <button type="submit" className="primary-btn w-full py-3 text-xs mt-2 shadow-sm">{t('save')}</button>
               </form>
             )}
 
             {activeTab === 'cards' && (
-              <form onSubmit={handleSaveCard} className="space-y-6">
-                <div className="grid grid-cols-2 gap-5">
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('description')}</label>
-                    <input name="name" required defaultValue={editingCard?.name || ""} className="font-bold text-base" />
+              <form onSubmit={handleSaveCard} className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('description')}</label>
+                    <input name="name" required defaultValue={editingCard?.name || ""} className="font-bold text-xs py-1.5 px-3" />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('bank')}</label>
-                    <input name="bank" required defaultValue={editingCard?.bank || ""} className="font-bold text-base" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-5">
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Limite</label>
-                    <input name="limit" type="number" step="0.01" required defaultValue={editingCard?.limit || ""} className="font-bold text-base" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('closingDay')}</label>
-                    <input name="closingDay" type="number" min="1" max="31" required defaultValue={editingCard?.closingDay || "10"} className="font-bold text-base" />
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('bank')}</label>
+                    <input name="bank" required defaultValue={editingCard?.bank || ""} className="font-bold text-xs py-1.5 px-3" />
                   </div>
                 </div>
-                
-                <div className="space-y-2">
-                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('cardColor')}</label>
-                  <div className="flex flex-wrap gap-3 p-4 bg-gray-50 rounded-2xl">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Limite</label>
+                    <input name="limit" type="number" step="0.01" required defaultValue={editingCard?.limit || ""} className="font-bold text-xs py-1.5 px-3" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('closingDay')}</label>
+                    <input name="closingDay" type="number" min="1" max="31" required defaultValue={editingCard?.closingDay || "10"} className="font-bold text-xs py-1.5 px-3 text-center" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('cardColor')}</label>
+                  <div className="flex flex-wrap gap-2 p-2 bg-gray-50 rounded-lg">
                     {CARD_COLORS.map(color => (
                       <button 
                         key={color} 
                         type="button" 
                         onClick={() => setSelectedCardColor(color)}
-                        className={`w-10 h-10 rounded-full border-4 transition-all ${selectedCardColor === color ? 'border-black scale-110 shadow-lg' : 'border-transparent hover:scale-105'}`}
+                        className={`w-6 h-6 rounded-full border-2 transition-all ${selectedCardColor === color ? 'border-black scale-110 shadow-sm' : 'border-transparent hover:scale-105'}`}
                         style={{ backgroundColor: color }}
                       />
                     ))}
                   </div>
                 </div>
-
-                <button type="submit" className="primary-btn w-full py-5 text-xl mt-6">{t('save')}</button>
+                <button type="submit" className="primary-btn w-full py-3 text-xs mt-2 shadow-sm">{t('save')}</button>
               </form>
             )}
 
             {activeTab === 'fixed' && (
-              <form onSubmit={handleSaveFixed} className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('description')}</label>
-                  <input name="description" required defaultValue={editingFixed?.description || ""} className="font-bold text-base" />
+              <form onSubmit={handleSaveFixed} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('description')}</label>
+                  <input name="description" required defaultValue={editingFixed?.description || ""} className="font-bold text-xs py-1.5 px-3" />
                 </div>
-                
-                <div className="grid grid-cols-2 gap-5">
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('type')}</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('type')}</label>
                     <select 
                       name="type" 
                       required 
                       value={fixedType} 
                       onChange={(e) => handleFixedTypeChange(e.target.value as TransactionType)} 
-                      className="font-bold text-base"
+                      className="font-bold text-[10px] py-1.5"
                     >
                       <option value="Despesa">{t('expenses')}</option>
                       <option value="Receita">{t('revenues')}</option>
                     </select>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('day')}</label>
-                    <input name="day" type="number" min="1" max="31" required defaultValue={editingFixed?.day || "1"} className="font-bold text-base" />
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('day')}</label>
+                    <input name="day" type="number" min="1" max="31" required defaultValue={editingFixed?.day || "1"} className="font-bold text-xs py-1.5 px-3 text-center" />
                   </div>
                 </div>
-
-                <div className="grid grid-cols-2 gap-5">
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('value')}</label>
-                    <input name="value" type="number" step="0.01" required defaultValue={editingFixed?.value || ""} className="font-bold text-base" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('value')}</label>
+                    <input name="value" type="number" step="0.01" required defaultValue={editingFixed?.value || ""} className="font-bold text-xs py-1.5 px-3" />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('category')}</label>
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('category')}</label>
                     <select 
                       name="categoryId" 
                       required 
                       value={fixedCategoryId} 
                       onChange={(e) => setFixedCategoryId(e.target.value)} 
-                      className="font-bold text-base"
+                      className="font-bold text-[10px] py-1.5"
                     >
                       {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>)}
                     </select>
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('paymentMethod')}</label>
-                  <select name="paymentMethod" required defaultValue={editingFixed?.paymentMethod || "Dinheiro"} className="font-bold text-base">
+                <div className="space-y-1">
+                  <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('paymentMethod')}</label>
+                  <select name="paymentMethod" required defaultValue={editingFixed?.paymentMethod || "Dinheiro"} className="font-bold text-[10px] py-1.5">
                     {PAYMENT_METHODS.map(m => <option key={m} value={m}>{t(m)}</option>)}
                   </select>
                 </div>
-
-                <button type="submit" className="primary-btn w-full py-5 text-xl mt-6">{t('save')}</button>
+                <button type="submit" className="primary-btn w-full py-3 text-xs mt-2 shadow-sm">{t('save')}</button>
               </form>
             )}
           </div>

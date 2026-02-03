@@ -72,59 +72,62 @@ const Patrimony: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 md:space-y-12 animate-in fade-in duration-700 max-w-[1200px] mx-auto pb-24 md:pb-20">
-      <div className="text-center py-6 md:py-12 px-4">
-        <span className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em] block mb-2 md:mb-4">{t('consolidatedPatrimony')}</span>
-        <h1 className={`text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter break-words ${totalPatrimony >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700 max-w-[1200px] mx-auto pb-24 md:pb-20 px-1">
+      <div className="text-center py-4 md:py-8">
+        <span className="text-[8px] font-black uppercase text-gray-400 tracking-[0.2em] block mb-1">{t('consolidatedPatrimony')}</span>
+        <h1 className={`text-2xl md:text-3xl font-black tracking-tighter ${totalPatrimony >= 0 ? 'text-green-600' : 'text-red-600'}`}>
           {formatCurrency(totalPatrimony)}
         </h1>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
-        <div className="space-y-6">
-          <div className="flex justify-between items-center px-2">
-            <h2 className="text-lg md:text-xl font-extrabold flex items-center gap-2"><Building2 size={20} className="text-gray-400" /> {t('reserves')}</h2>
-            <button onClick={() => { setEditingAsset(null); setIsAddingAsset(true); }} className="bg-black text-white text-[10px] font-black uppercase px-4 py-2 rounded-xl flex items-center gap-2"><Plus size={14} /> {t('newAsset')}</button>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+        <div className="space-y-4">
+          <div className="flex justify-between items-center px-1">
+            <h2 className="text-sm font-black uppercase tracking-tight flex items-center gap-2"><Building2 size={16} className="text-gray-400" /> {t('reserves')}</h2>
+            <button onClick={() => { setEditingAsset(null); setIsAddingAsset(true); }} className="bg-black text-white text-[8px] font-black uppercase px-3 py-1.5 rounded-lg flex items-center gap-1.5"><Plus size={12} /> {t('newAsset')}</button>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {assets.map(asset => (
-              <div key={asset.id} className="airbnb-card p-5 md:p-6 flex justify-between items-center group">
+              <div key={asset.id} className="airbnb-card p-3 md:p-4 flex justify-between items-center group">
                 <div className="min-w-0 pr-4">
-                  <h4 className="font-extrabold text-base md:text-lg truncate">{asset.description}</h4>
-                  <p className="text-[9px] md:text-[10px] text-gray-400 font-black uppercase tracking-wider truncate">
+                  <h4 className="font-black text-sm text-gray-800 truncate leading-tight">{asset.description}</h4>
+                  <p className="text-[8px] text-gray-400 font-bold uppercase tracking-wider truncate">
                     {asset.bank} • {t('liquidity')}: {asset.liquidity}
                   </p>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <div className="text-right mr-2"><div className={`font-extrabold text-base ${asset.value >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(asset.value)}</div></div>
-                  <button onClick={() => { setEditingAsset(asset); setIsAddingAsset(true); }} className="text-gray-200 hover:text-black p-2"><Pencil size={16} /></button>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="text-right mr-1"><div className={`font-black text-sm ${asset.value >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(asset.value)}</div></div>
+                  <button onClick={() => { setEditingAsset(asset); setIsAddingAsset(true); }} className="text-gray-200 hover:text-black p-1.5"><Pencil size={14} /></button>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="flex justify-between items-center px-2">
-            <h2 className="text-lg md:text-xl font-extrabold flex items-center gap-2"><TrendingUp size={20} className="text-gray-400" /> {t('investments')}</h2>
-            <button onClick={() => { setEditingInvestment(null); setIsAddingInvestment(true); }} className="bg-black text-white text-[10px] font-black uppercase px-4 py-2 rounded-xl flex items-center gap-2"><Plus size={14} /> {t('newInvestment')}</button>
+        <div className="space-y-4">
+          <div className="flex justify-between items-center px-1">
+            <h2 className="text-sm font-black uppercase tracking-tight flex items-center gap-2"><TrendingUp size={16} className="text-gray-400" /> {t('investments')}</h2>
+            <button onClick={() => { setEditingInvestment(null); setIsAddingInvestment(true); }} className="bg-black text-white text-[8px] font-black uppercase px-3 py-1.5 rounded-lg flex items-center gap-1.5"><Plus size={12} /> {t('newInvestment')}</button>
           </div>
           <div className="airbnb-card overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left min-w-[350px]">
+              <table className="w-full text-left min-w-[300px]">
                 <thead>
-                  <tr className="bg-gray-50 text-[10px] font-black text-gray-400 uppercase border-b"><th className="px-5 py-4">{t('description')}</th><th className="px-5 py-4 text-right">{t('value')}</th><th className="px-5 py-4"></th></tr>
+                  <tr className="bg-gray-50 text-[8px] font-black text-gray-400 uppercase border-b tracking-widest"><th className="px-4 py-3">{t('description')}</th><th className="px-4 py-3 text-right">{t('value')}</th><th className="px-4 py-3"></th></tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {investments.map(inv => (
-                    <tr key={inv.id} className="group hover:bg-gray-50">
-                      <td className="px-5 py-5">
-                        <div className="flex flex-col min-w-0"><span className="font-extrabold text-sm truncate">{inv.category || 'Ativo'}</span><span className="text-[10px] text-gray-400 font-bold uppercase">{inv.type} • {inv.broker}</span></div>
+                    <tr key={inv.id} className="group hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-4">
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-black text-xs text-gray-800 truncate">{inv.category || 'Ativo'}</span>
+                          <span className="text-[8px] text-gray-400 font-black uppercase tracking-tight">{inv.type} • {inv.broker}</span>
+                        </div>
                       </td>
-                      <td className="px-5 py-5 text-right font-extrabold text-sm text-green-600">{formatCurrency(inv.value)}</td>
-                      <td className="px-5 py-5 text-right whitespace-nowrap">
-                        <button onClick={() => { setEditingInvestment(inv); setIsAddingInvestment(true); }} className="text-gray-200 hover:text-black p-2"><Pencil size={16} /></button>
-                        <button onClick={() => setInvestments(prev => prev.filter(i => i.id !== inv.id))} className="text-gray-200 hover:text-red-500 p-2"><Trash2 size={16} /></button>
+                      <td className="px-4 py-4 text-right font-black text-xs text-green-600">{formatCurrency(inv.value)}</td>
+                      <td className="px-4 py-4 text-right whitespace-nowrap">
+                        <button onClick={() => { setEditingInvestment(inv); setIsAddingInvestment(true); }} className="text-gray-200 hover:text-black p-1"><Pencil size={14} /></button>
+                        <button onClick={() => setInvestments(prev => prev.filter(i => i.id !== inv.id))} className="text-gray-200 hover:text-red-500 p-1"><Trash2 size={14} /></button>
                       </td>
                     </tr>
                   ))}
@@ -136,52 +139,52 @@ const Patrimony: React.FC = () => {
       </div>
 
       {isAddingAsset && (
-        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-[32px] w-full max-w-lg p-10 animate-in zoom-in duration-300 shadow-2xl relative">
-            <button onClick={() => { setIsAddingAsset(false); setEditingAsset(null); }} className="absolute right-6 top-6 p-2 hover:bg-gray-100 rounded-full text-gray-400"><X size={20} /></button>
-            <h2 className="text-2xl font-black mb-8 tracking-tight">{editingAsset ? t('edit') : t('newAsset')}</h2>
-            <form onSubmit={handleSaveAsset} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('description')}</label>
-                <input name="description" required defaultValue={editingAsset?.description || ""} className="font-bold text-sm" />
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-[24px] w-full max-w-sm p-6 md:p-8 animate-in zoom-in duration-300 shadow-2xl relative my-auto">
+            <button onClick={() => { setIsAddingAsset(false); setEditingAsset(null); }} className="absolute right-5 top-5 p-1.5 hover:bg-gray-100 rounded-full text-gray-400"><X size={18} /></button>
+            <h2 className="text-lg font-black mb-6 tracking-tight">{editingAsset ? t('edit') : t('newAsset')}</h2>
+            <form onSubmit={handleSaveAsset} className="space-y-3">
+              <div className="space-y-0.5">
+                <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('description')}</label>
+                <input name="description" required defaultValue={editingAsset?.description || ""} className="font-bold text-xs py-1.5 px-3" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('bank')}</label>
-                  <input name="bank" required defaultValue={editingAsset?.bank || ""} className="font-bold text-sm" />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-0.5">
+                  <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('bank')}</label>
+                  <input name="bank" required defaultValue={editingAsset?.bank || ""} className="font-bold text-xs py-1.5 px-3" />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('value')}</label>
-                  <input name="value" type="number" step="0.01" required defaultValue={editingAsset?.value || ""} className="font-bold text-sm" />
+                <div className="space-y-0.5">
+                  <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('value')}</label>
+                  <input name="value" type="number" step="0.01" required defaultValue={editingAsset?.value || ""} className="font-black text-xs py-1.5 px-3" />
                 </div>
               </div>
-              <button type="submit" className="primary-btn w-full py-4 text-lg mt-4">{t('save')}</button>
+              <button type="submit" className="primary-btn w-full py-3 text-xs mt-3 shadow-sm">{t('save')}</button>
             </form>
           </div>
         </div>
       )}
 
       {isAddingInvestment && (
-        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-[32px] w-full max-w-lg p-10 animate-in zoom-in duration-300 shadow-2xl relative">
-            <button onClick={() => { setIsAddingInvestment(false); setEditingInvestment(null); }} className="absolute right-6 top-6 p-2 hover:bg-gray-100 rounded-full text-gray-400"><X size={20} /></button>
-            <h2 className="text-2xl font-black mb-8 tracking-tight">{editingInvestment ? t('edit') : t('newInvestment')}</h2>
-            <form onSubmit={handleSaveInvestment} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('broker')}</label>
-                  <input name="broker" required defaultValue={editingInvestment?.broker || ""} className="font-bold text-sm" />
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-[24px] w-full max-w-sm p-6 md:p-8 animate-in zoom-in duration-300 shadow-2xl relative my-auto">
+            <button onClick={() => { setIsAddingInvestment(false); setEditingInvestment(null); }} className="absolute right-5 top-5 p-1.5 hover:bg-gray-100 rounded-full text-gray-400"><X size={18} /></button>
+            <h2 className="text-lg font-black mb-6 tracking-tight">{editingInvestment ? t('edit') : t('newInvestment')}</h2>
+            <form onSubmit={handleSaveInvestment} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-0.5">
+                  <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('broker')}</label>
+                  <input name="broker" required defaultValue={editingInvestment?.broker || ""} className="font-bold text-xs py-1.5 px-3" />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('value')}</label>
-                  <input name="value" type="number" step="0.01" required defaultValue={editingInvestment?.value || ""} className="font-bold text-sm" />
+                <div className="space-y-0.5">
+                  <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('value')}</label>
+                  <input name="value" type="number" step="0.01" required defaultValue={editingInvestment?.value || ""} className="font-black text-xs py-1.5 px-3" />
                 </div>
               </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('assetName')}</label>
-                <input name="category" required defaultValue={editingInvestment?.category || ""} className="font-bold text-sm" />
+              <div className="space-y-0.5">
+                <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('assetName')}</label>
+                <input name="category" required defaultValue={editingInvestment?.category || ""} className="font-bold text-xs py-1.5 px-3" />
               </div>
-              <button type="submit" className="primary-btn w-full py-4 text-lg mt-4">{t('save')}</button>
+              <button type="submit" className="primary-btn w-full py-3 text-xs mt-3 shadow-sm">{t('save')}</button>
             </form>
           </div>
         </div>
