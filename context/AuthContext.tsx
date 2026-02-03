@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User, UserPermissions } from '../types';
 import { supabase } from '../lib/supabase';
 
@@ -17,95 +17,166 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [users, setUsers] = useState<User[]>(() => {
-    const saved = localStorage.getItem('easyfinance_users');
-    return saved ? JSON.parse(saved) : [];
-  });
-
+  const [users, setUsers] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const session = sessionStorage.getItem('easyfinance_session');
+    const session = sessionStorage.getItem('mzfinance_session');
     return session ? JSON.parse(session) : null;
   });
 
-  useEffect(() => {
-    localStorage.setItem('easyfinance_users', JSON.stringify(users));
-  }, [users]);
-
-  useEffect(() => {
-    if (currentUser) {
-      sessionStorage.setItem('easyfinance_session', JSON.stringify(currentUser));
-    } else {
-      sessionStorage.removeItem('easyfinance_session');
+  // Função para buscar o perfil completo do usuário no Supabase
+  const fetchUserProfile = useCallback(async (userId: string) => {
+    if (!supabase) return null;
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error) throw error;
+      return data as User;
+    } catch (err) {
+      console.error("Erro ao buscar perfil:", err);
+      return null;
     }
-  }, [currentUser]);
+  }, []);
 
-  // Função para recuperar senha real via Supabase
+  // Escuta mudanças na autenticação do Supabase
+  useEffect(() => {
+    if (!supabase) return;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setCurrentUser(null);
+        sessionStorage.removeItem('mzfinance_session');
+      } else if (session?.user) {
+        const profile = await fetchUserProfile(session.user.id);
+        if (profile) {
+          setCurrentUser(profile);
+          sessionStorage.setItem('mzfinance_session', JSON.stringify(profile));
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [fetchUserProfile]);
+
   const requestPasswordReset = async (email: string) => {
     if (!supabase) return { success: false, error: 'Supabase não configurado' };
-    
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: window.location.origin + '/#/login?reset=true',
       });
-      
       if (error) throw error;
       return { success: true };
     } catch (err: any) {
-      console.error("Erro ao solicitar recuperação:", err.message);
       return { success: false, error: err.message };
     }
   };
 
   const login = async (username: string, passwordHash: string) => {
-    // Nota: Para produção, o ideal é usar supabase.auth.signInWithPassword
-    // Aqui mantemos a lógica de busca na tabela de usuários para compatibilidade com dependentes
-    const user = users.find(u => u.username === username && u.passwordHash === passwordHash);
-    if (user) {
-      setCurrentUser(user);
-      return true;
+    if (!supabase) return false;
+
+    try {
+      // 1. Precisamos do e-mail para logar no Supabase Auth, então buscamos o perfil pelo username primeiro
+      const { data: profile, error: pError } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('username', username)
+        .single();
+
+      if (pError || !profile?.email) throw new Error("Usuário não encontrado.");
+
+      // 2. Tenta o login real no Supabase Auth
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: profile.email,
+        password: passwordHash,
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        const fullProfile = await fetchUserProfile(data.user.id);
+        setCurrentUser(fullProfile);
+        return true;
+      }
+      return false;
+    } catch (err: any) {
+      console.error("Erro no login:", err.message);
+      return false;
     }
-    return false;
   };
 
-  const logout = () => {
-    if (supabase) supabase.auth.signOut();
+  const logout = async () => {
+    if (supabase) await supabase.auth.signOut();
     setCurrentUser(null);
-    sessionStorage.removeItem('easyfinance_session');
+    sessionStorage.removeItem('mzfinance_session');
     window.location.href = '#/login';
-    window.location.reload();
   };
 
   const register = async (userData: Omit<User, 'id'>) => {
-    const newUser: User = { ...userData, id: crypto.randomUUID() };
-    
-    // Se o Supabase estiver ativo, podemos criar o usuário lá também
-    if (supabase && userData.role === 'responsible' && userData.email) {
-      try {
-        await supabase.auth.signUp({
+    if (!supabase) throw new Error("Conexão com banco de dados não disponível.");
+
+    try {
+      // 1. Criar usuário no Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.passwordHash,
+        options: {
+          data: { name: userData.name, username: userData.username }
+        }
+      });
+
+      if (error) throw error;
+      if (!data.user) throw new Error("Falha ao criar usuário.");
+
+      // 2. Salvar o perfil na tabela 'profiles'
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([{
+          id: data.user.id,
+          name: userData.name,
+          username: userData.username,
           email: userData.email,
-          password: userData.passwordHash, // Usando a senha como hash para simplicidade neste exemplo
-          options: { data: { name: userData.name, username: userData.username } }
-        });
-      } catch (e) {
-        console.warn("Falha ao registrar no Supabase Auth, mas salvando localmente:", e);
+          role: userData.role,
+          permissions: userData.permissions,
+          responsible_id: userData.responsibleId || null
+        }]);
+
+      if (profileError) throw profileError;
+
+      // O listener onAuthStateChange cuidará de setar o currentUser
+    } catch (err: any) {
+      console.error("Erro no registro:", err.message);
+      throw err;
+    }
+  };
+
+  const updateDependentPermissions = async (userId: string, permissions: UserPermissions) => {
+    if (!supabase) return;
+    try {
+      await supabase
+        .from('profiles')
+        .update({ permissions })
+        .eq('id', userId);
+      
+      if (currentUser?.id === userId) {
+        setCurrentUser(prev => prev ? { ...prev, permissions } : null);
       }
-    }
-
-    setUsers(prev => [...prev, newUser]);
-    if (userData.role === 'responsible') {
-      setCurrentUser(newUser);
+    } catch (err) {
+      console.error("Erro ao atualizar permissões:", err);
     }
   };
 
-  const updateDependentPermissions = (userId: string, permissions: UserPermissions) => {
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, permissions } : u));
-    if (currentUser?.id === userId) {
-      setCurrentUser(prev => prev ? { ...prev, permissions } : null);
+  const deleteUser = async (userId: string) => {
+    if (!supabase) return;
+    try {
+      await supabase.from('profiles').delete().eq('id', userId);
+      // Nota: No Supabase, deletar do profiles não deleta do Auth automaticamente 
+      // sem uma função extra de Edge Functions ou RPC.
+    } catch (err) {
+      console.error("Erro ao deletar usuário:", err);
     }
-  };
-
-  const deleteUser = (userId: string) => {
-    setUsers(prev => prev.filter(u => u.id !== userId));
   };
 
   return (

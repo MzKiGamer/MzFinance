@@ -6,7 +6,7 @@ import { KeyRound, Mail, User as UserIcon, ShieldCheck, AlertCircle, Check, X, E
 type AuthMode = 'login' | 'register' | 'forgot' | 'mfa';
 
 const Login: React.FC = () => {
-  const { login, register, users, requestPasswordReset } = useAuth();
+  const { login, register, requestPasswordReset } = useAuth();
   const [mode, setMode] = useState<AuthMode>('login');
   const [form, setForm] = useState({ name: '', username: '', email: '', password: '', confirmPassword: '' });
   const [error, setError] = useState('');
@@ -60,13 +60,14 @@ const Login: React.FC = () => {
       if (mode === 'login') {
         const success = await login(form.username, form.password);
         if (success) {
+          // No sistema de teste, pulamos MFA ou simulamos
           setMode('mfa');
         } else {
           setError('Usuário ou senha incorretos.');
         }
       } else if (mode === 'mfa') {
         if (mfaCode === '123456') {
-          window.location.reload(); 
+          window.location.href = '/'; 
         } else {
           setError('Código MFA inválido. Use 123456 para testar.');
         }
@@ -90,12 +91,6 @@ const Login: React.FC = () => {
           return;
         }
 
-        if (users.find(u => u.username === form.username)) {
-          setError('Este nome de usuário já está em uso.');
-          setIsLoading(false);
-          return;
-        }
-
         await register({
           name: form.name,
           username: form.username,
@@ -111,6 +106,9 @@ const Login: React.FC = () => {
             canManageSettings: true,
           }
         });
+        
+        setSuccessMsg('Conta criada com sucesso! Verifique seu e-mail (se necessário).');
+        setTimeout(() => setMode('login'), 2000);
       } else if (mode === 'forgot') {
         if (!isValidEmail) {
           setError('Insira um e-mail válido.');
@@ -120,10 +118,10 @@ const Login: React.FC = () => {
         
         const result = await requestPasswordReset(form.email);
         if (result.success) {
-          setSuccessMsg('E-mail de recuperação enviado! Verifique sua caixa de entrada e spam.');
-          setForm({ ...form, email: '' }); // Limpa o campo
+          setSuccessMsg('E-mail de recuperação enviado! Verifique sua caixa de entrada.');
+          setForm({ ...form, email: '' });
         } else {
-          setError(result.error || 'Erro ao enviar e-mail. Tente novamente mais tarde.');
+          setError(result.error || 'Erro ao enviar e-mail.');
         }
       }
     } catch (err: any) {
@@ -147,7 +145,7 @@ const Login: React.FC = () => {
           <h1 className="text-2xl font-extrabold tracking-tight">
             {mode === 'login' ? 'Bem Vindo' : mode === 'register' ? 'Criar Conta' : mode === 'mfa' ? 'Verificação' : 'Recuperação'}
           </h1>
-          <p className="text-gray-500 font-medium">Mz Finance</p>
+          <p className="text-gray-500 font-medium">Mz Finance Cloud Sync</p>
         </div>
 
         <div className="airbnb-card p-10 shadow-2xl border-gray-100">
