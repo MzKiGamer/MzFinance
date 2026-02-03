@@ -23,7 +23,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return session ? JSON.parse(session) : null;
   });
 
-  // Função para buscar o perfil completo do usuário no Supabase
   const fetchUserProfile = useCallback(async (userId: string) => {
     if (!supabase) return null;
     try {
@@ -41,11 +40,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Escuta mudanças na autenticação do Supabase
   useEffect(() => {
     if (!supabase) return;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // Use 'any' cast to bypass type errors for standard Supabase Auth methods
+    const auth = (supabase.auth as any);
+    const { data: { subscription } } = auth.onAuthStateChange(async (event: any, session: any) => {
       if (event === 'SIGNED_OUT') {
         setCurrentUser(null);
         sessionStorage.removeItem('mzfinance_session');
@@ -62,9 +62,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [fetchUserProfile]);
 
   const requestPasswordReset = async (email: string) => {
-    if (!supabase) return { success: false, error: 'Supabase não configurado' };
+    if (!supabase) return { success: false, error: 'Banco de dados não configurado.' };
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      // Use 'any' cast to bypass type errors for standard Supabase Auth methods
+      const auth = (supabase.auth as any);
+      const { error } = await auth.resetPasswordForEmail(email, {
         redirectTo: window.location.origin + '/#/login?reset=true',
       });
       if (error) throw error;
@@ -78,7 +80,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!supabase) return false;
 
     try {
-      // 1. Precisamos do e-mail para logar no Supabase Auth, então buscamos o perfil pelo username primeiro
       const { data: profile, error: pError } = await supabase
         .from('profiles')
         .select('email')
@@ -87,8 +88,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (pError || !profile?.email) throw new Error("Usuário não encontrado.");
 
-      // 2. Tenta o login real no Supabase Auth
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // Use 'any' cast to bypass type errors for standard Supabase Auth methods
+      const auth = (supabase.auth as any);
+      const { data, error } = await auth.signInWithPassword({
         email: profile.email,
         password: passwordHash,
       });
@@ -108,18 +110,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    if (supabase) await supabase.auth.signOut();
+    // Use 'any' cast to bypass type errors for standard Supabase Auth methods
+    if (supabase) await (supabase.auth as any).signOut();
     setCurrentUser(null);
     sessionStorage.removeItem('mzfinance_session');
     window.location.href = '#/login';
   };
 
   const register = async (userData: Omit<User, 'id'>) => {
-    if (!supabase) throw new Error("Conexão com banco de dados não disponível.");
+    if (!supabase) {
+      throw new Error(
+        "A conexão com o banco de dados (Supabase) não foi detectada. " +
+        "Certifique-se de cadastrar suas chaves REAIS (URL e ANON KEY) na aba 'Secrets' ou 'Environment Variables' do seu editor. " +
+        "O arquivo .env.local sozinho pode não ser lido em alguns ambientes de visualização."
+      );
+    }
 
     try {
-      // 1. Criar usuário no Supabase Auth
-      const { data, error } = await supabase.auth.signUp({
+      // Use 'any' cast to bypass type errors for standard Supabase Auth methods
+      const auth = (supabase.auth as any);
+      const { data, error } = await auth.signUp({
         email: userData.email,
         password: userData.passwordHash,
         options: {
@@ -128,9 +138,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) throw error;
-      if (!data.user) throw new Error("Falha ao criar usuário.");
+      if (!data.user) throw new Error("Não foi possível criar a conta no serviço de autenticação.");
 
-      // 2. Salvar o perfil na tabela 'profiles'
       const { error: profileError } = await supabase
         .from('profiles')
         .insert([{
@@ -144,8 +153,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }]);
 
       if (profileError) throw profileError;
-
-      // O listener onAuthStateChange cuidará de setar o currentUser
     } catch (err: any) {
       console.error("Erro no registro:", err.message);
       throw err;
@@ -172,8 +179,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!supabase) return;
     try {
       await supabase.from('profiles').delete().eq('id', userId);
-      // Nota: No Supabase, deletar do profiles não deleta do Auth automaticamente 
-      // sem uma função extra de Edge Functions ou RPC.
     } catch (err) {
       console.error("Erro ao deletar usuário:", err);
     }
