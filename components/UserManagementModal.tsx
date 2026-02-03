@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Trash2, Edit3, Shield, CheckCircle2, X } from 'lucide-react';
+import { Plus, Trash2, Edit3, Shield, CheckCircle2, X, Mail } from 'lucide-react';
 import { User, UserPermissions } from '../types';
 
 interface Props {
@@ -60,7 +60,7 @@ const UserManagementModal: React.FC<Props> = ({ isOpen, onClose }) => {
     } else {
       register({
         name: fd.get('name') as string,
-        username: fd.get('username') as string,
+        email: fd.get('email') as string,
         passwordHash: fd.get('password') as string,
         role: 'dependent',
         responsibleId: currentUser?.id,
@@ -103,7 +103,7 @@ const UserManagementModal: React.FC<Props> = ({ isOpen, onClose }) => {
                       </div>
                       <div>
                         <h4 className="font-extrabold text-gray-800">{dep.name}</h4>
-                        <span className="text-xs font-black text-gray-400 uppercase tracking-tighter">@{dep.username}</span>
+                        <span className="text-xs font-black text-gray-400 uppercase tracking-tighter">{dep.email}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -137,8 +137,8 @@ const UserManagementModal: React.FC<Props> = ({ isOpen, onClose }) => {
                       <input name="name" required placeholder="Ex: João Silva" />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Usuário de Login</label>
-                      <input name="username" required placeholder="joao_silva" />
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">E-mail de Acesso</label>
+                      <input name="email" type="email" required placeholder="joao@familia.com" />
                     </div>
                     <div className="md:col-span-2 space-y-1">
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Senha Inicial</label>

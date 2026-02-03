@@ -6,9 +6,9 @@ import { supabase } from '../lib/supabase';
 interface AuthContextType {
   currentUser: User | null;
   users: User[];
-  login: (username: string, passwordHash: string) => Promise<boolean>;
+  login: (email: string, passwordHash: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-  register: (user: Omit<User, 'id'>) => Promise<void>;
+  register: (user: Omit<User, 'id' | 'username'>) => Promise<void>;
   requestPasswordReset: (email: string) => Promise<{ success: boolean; error?: string }>;
   updateDependentPermissions: (userId: string, permissions: UserPermissions) => void;
   deleteUser: (userId: string) => void;
@@ -43,7 +43,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (!supabase) return;
 
-    // Use 'any' cast to bypass type errors for standard Supabase Auth methods
     const auth = (supabase.auth as any);
     const { data: { subscription } } = auth.onAuthStateChange(async (event: any, session: any) => {
       if (event === 'SIGNED_OUT') {
@@ -64,7 +63,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const requestPasswordReset = async (email: string) => {
     if (!supabase) return { success: false, error: 'Banco de dados não configurado.' };
     try {
-      // Use 'any' cast to bypass type errors for standard Supabase Auth methods
       const auth = (supabase.auth as any);
       const { error } = await auth.resetPasswordForEmail(email, {
         redirectTo: window.location.origin + '/#/login?reset=true',
@@ -76,76 +74,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const login = async (username: string, passwordHash: string) => {
-    if (!supabase) return false;
+  const login = async (email: string, passwordHash: string) => {
+    if (!supabase) return { success: false, error: "Erro de conexão." };
 
     try {
-      const { data: profile, error: pError } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('username', username)
-        .single();
-
-      if (pError || !profile?.email) throw new Error("Usuário não encontrado.");
-
-      // Use 'any' cast to bypass type errors for standard Supabase Auth methods
       const auth = (supabase.auth as any);
       const { data, error } = await auth.signInWithPassword({
-        email: profile.email,
+        email,
         password: passwordHash,
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("Email not confirmed")) {
+          return { success: false, error: "E-mail não confirmado. Verifique sua caixa de entrada." };
+        }
+        return { success: false, error: "E-mail ou senha incorretos." };
+      }
 
       if (data.user) {
         const fullProfile = await fetchUserProfile(data.user.id);
-        setCurrentUser(fullProfile);
-        return true;
+        if (fullProfile) {
+          setCurrentUser(fullProfile);
+          return { success: true };
+        }
       }
-      return false;
+      return { success: false, error: "Falha ao carregar perfil." };
     } catch (err: any) {
-      console.error("Erro no login:", err.message);
-      return false;
+      return { success: false, error: err.message };
     }
   };
 
   const logout = async () => {
-    // Use 'any' cast to bypass type errors for standard Supabase Auth methods
     if (supabase) await (supabase.auth as any).signOut();
     setCurrentUser(null);
     sessionStorage.removeItem('mzfinance_session');
     window.location.href = '#/login';
   };
 
-  const register = async (userData: Omit<User, 'id'>) => {
-    if (!supabase) {
-      throw new Error(
-        "A conexão com o banco de dados (Supabase) não foi detectada. " +
-        "Certifique-se de cadastrar suas chaves REAIS (URL e ANON KEY) na aba 'Secrets' ou 'Environment Variables' do seu editor. " +
-        "O arquivo .env.local sozinho pode não ser lido em alguns ambientes de visualização."
-      );
-    }
+  const register = async (userData: Omit<User, 'id' | 'username'>) => {
+    if (!supabase) throw new Error("Banco de dados não configurado.");
 
     try {
-      // Use 'any' cast to bypass type errors for standard Supabase Auth methods
+      // Gera username a partir do email (antes do @)
+      const autoUsername = userData.email?.split('@')[0] || `user_${Math.random().toString(36).substring(7)}`;
+
       const auth = (supabase.auth as any);
       const { data, error } = await auth.signUp({
         email: userData.email,
         password: userData.passwordHash,
         options: {
-          data: { name: userData.name, username: userData.username }
+          data: { name: userData.name, username: autoUsername }
         }
       });
 
       if (error) throw error;
-      if (!data.user) throw new Error("Não foi possível criar a conta no serviço de autenticação.");
+      if (!data.user) throw new Error("Não foi possível criar a conta.");
 
       const { error: profileError } = await supabase
         .from('profiles')
         .insert([{
           id: data.user.id,
           name: userData.name,
-          username: userData.username,
+          username: autoUsername,
           email: userData.email,
           role: userData.role,
           permissions: userData.permissions,
@@ -154,7 +144,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (profileError) throw profileError;
     } catch (err: any) {
-      console.error("Erro no registro:", err.message);
       throw err;
     }
   };

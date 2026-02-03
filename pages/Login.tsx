@@ -1,14 +1,14 @@
 
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { KeyRound, Mail, User as UserIcon, ShieldCheck, AlertCircle, Check, X, Eye, EyeOff, ArrowLeft, Send, Loader2 } from 'lucide-react';
+import { KeyRound, Mail, User as UserIcon, ShieldCheck, AlertCircle, Check, Eye, EyeOff, ArrowLeft, Send, Loader2 } from 'lucide-react';
 
 type AuthMode = 'login' | 'register' | 'forgot' | 'mfa';
 
 const Login: React.FC = () => {
   const { login, register, requestPasswordReset } = useAuth();
   const [mode, setMode] = useState<AuthMode>('login');
-  const [form, setForm] = useState({ name: '', username: '', email: '', password: '', confirmPassword: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -58,12 +58,11 @@ const Login: React.FC = () => {
 
     try {
       if (mode === 'login') {
-        const success = await login(form.username, form.password);
-        if (success) {
-          // No sistema de teste, pulamos MFA ou simulamos
+        const result = await login(form.email, form.password);
+        if (result.success) {
           setMode('mfa');
         } else {
-          setError('Usuário ou senha incorretos.');
+          setError(result.error || 'Erro ao realizar login.');
         }
       } else if (mode === 'mfa') {
         if (mfaCode === '123456') {
@@ -93,7 +92,6 @@ const Login: React.FC = () => {
 
         await register({
           name: form.name,
-          username: form.username,
           email: form.email,
           passwordHash: form.password,
           role: 'responsible',
@@ -107,8 +105,8 @@ const Login: React.FC = () => {
           }
         });
         
-        setSuccessMsg('Conta criada com sucesso! Verifique seu e-mail (se necessário).');
-        setTimeout(() => setMode('login'), 2000);
+        setSuccessMsg('Conta criada! Verifique seu e-mail para confirmar o cadastro antes de entrar.');
+        setTimeout(() => setMode('login'), 3000);
       } else if (mode === 'forgot') {
         if (!isValidEmail) {
           setError('Insira um e-mail válido.');
@@ -118,7 +116,7 @@ const Login: React.FC = () => {
         
         const result = await requestPasswordReset(form.email);
         if (result.success) {
-          setSuccessMsg('E-mail de recuperação enviado! Verifique sua caixa de entrada.');
+          setSuccessMsg('E-mail de recuperação enviado!');
           setForm({ ...form, email: '' });
         } else {
           setError(result.error || 'Erro ao enviar e-mail.');
@@ -143,7 +141,7 @@ const Login: React.FC = () => {
         <div className="text-center space-y-2">
           <div className="w-16 h-16 bg-[#FF385C] rounded-2xl mx-auto flex items-center justify-center text-white text-3xl font-black shadow-lg">M</div>
           <h1 className="text-2xl font-extrabold tracking-tight">
-            {mode === 'login' ? 'Bem Vindo' : mode === 'register' ? 'Criar Conta' : mode === 'mfa' ? 'Verificação' : 'Recuperação'}
+            {mode === 'login' ? 'Acessar Conta' : mode === 'register' ? 'Criar Conta' : mode === 'mfa' ? 'Verificação' : 'Recuperação'}
           </h1>
           <p className="text-gray-500 font-medium">Mz Finance Cloud Sync</p>
         </div>
@@ -233,34 +231,19 @@ const Login: React.FC = () => {
                   </div>
                 )}
 
-                {mode === 'register' && (
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">E-mail de Cadastro</label>
-                    <div className="relative">
-                      <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 ${(touchedEmail || form.email) && !isValidEmail ? 'text-red-500' : 'text-gray-400'}`} size={18} />
-                      <input 
-                        type="email"
-                        onBlur={() => setTouchedEmail(true)}
-                        className={`pl-12 bg-gray-50 border-gray-100 ${(touchedEmail || form.email) && !isValidEmail ? 'border-red-300 ring-2 ring-red-50' : ''}`}
-                        placeholder="exemplo@email.com"
-                        value={form.email}
-                        onChange={e => setForm({...form, email: e.target.value})}
-                        disabled={isLoading}
-                        required
-                      />
-                    </div>
-                  </div>
-                )}
-
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Usuário de Acesso</label>
+                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">
+                    E-mail de Acesso
+                  </label>
                   <div className="relative">
-                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 ${(touchedEmail || form.email) && !isValidEmail && mode === 'register' ? 'text-red-500' : 'text-gray-400'}`} size={18} />
                     <input 
-                      className="pl-12 bg-gray-50 border-gray-100 font-bold"
-                      placeholder="Identificador"
-                      value={form.username}
-                      onChange={e => setForm({...form, username: e.target.value})}
+                      type="email"
+                      onBlur={() => setTouchedEmail(true)}
+                      className={`pl-12 bg-gray-50 border-gray-100 font-bold ${(touchedEmail || form.email) && !isValidEmail && mode === 'register' ? 'border-red-300 ring-2 ring-red-50' : ''}`}
+                      placeholder="exemplo@email.com"
+                      value={form.email}
+                      onChange={e => setForm({...form, email: e.target.value})}
                       disabled={isLoading}
                       required
                     />
