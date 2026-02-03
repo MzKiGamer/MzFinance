@@ -1,13 +1,13 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { 
   Transaction, Category, Card, Goal, FixedEntry, 
   Asset, Investment, MonthConfig 
 } from '../types';
 import { DEFAULT_CATEGORIES } from '../constants';
+import { supabase } from '../lib/supabase';
+import { useAuth } from './AuthContext';
 
-// Fix: Updated setter types from simple function to React.Dispatch<React.SetStateAction<T>> 
-// to support functional updates like setTransactions(prev => ...), which prevents stale state issues.
 interface FinanceContextType {
   categories: Category[];
   setCategories: React.Dispatch<React.SetStateAction<Category[]>>;
@@ -25,59 +25,125 @@ interface FinanceContextType {
   setInvestments: React.Dispatch<React.SetStateAction<Investment[]>>;
   monthConfigs: MonthConfig[];
   updateMonthConfig: (config: MonthConfig) => void;
+  isLoading: boolean;
+  isSyncing: boolean;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
 export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [categories, setCategories] = useState<Category[]>(() => {
-    const saved = localStorage.getItem('easyfinance_categories');
-    return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
-  });
+  const { currentUser } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
-  const [cards, setCards] = useState<Card[]>(() => {
-    const saved = localStorage.getItem('easyfinance_cards');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // States
+  const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
+  const [cards, setCards] = useState<Card[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [fixedEntries, setFixedEntries] = useState<FixedEntry[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [investments, setInvestments] = useState<Investment[]>([]);
+  const [monthConfigs, setMonthConfigs] = useState<MonthConfig[]>([]);
 
-  const [goals, setGoals] = useState<Goal[]>(() => {
-    const saved = localStorage.getItem('easyfinance_goals');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const clearLocalStates = useCallback(() => {
+    setDataLoaded(false);
+    setTransactions([]);
+    setCategories(DEFAULT_CATEGORIES);
+    setCards([]);
+    setGoals([]);
+    setFixedEntries([]);
+    setAssets([]);
+    setInvestments([]);
+    setMonthConfigs([]);
+  }, []);
 
-  const [fixedEntries, setFixedEntries] = useState<FixedEntry[]>(() => {
-    const saved = localStorage.getItem('easyfinance_fixed');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const fetchData = useCallback(async () => {
+    if (!currentUser || !supabase) {
+      // Se não houver supabase, marcamos como carregado para permitir uso local
+      setDataLoaded(true);
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      const [
+        { data: txs }, 
+        { data: cats }, 
+        { data: crds }, 
+        { data: gls }, 
+        { data: fixed }, 
+        { data: asts }, 
+        { data: invs }, 
+        { data: mconfs }
+      ] = await Promise.all([
+        supabase.from('transactions').select('*').eq('user_id', currentUser.id),
+        supabase.from('categories').select('*').eq('user_id', currentUser.id),
+        supabase.from('cards').select('*').eq('user_id', currentUser.id),
+        supabase.from('goals').select('*').eq('user_id', currentUser.id),
+        supabase.from('fixed_entries').select('*').eq('user_id', currentUser.id),
+        supabase.from('assets').select('*').eq('user_id', currentUser.id),
+        supabase.from('investments').select('*').eq('user_id', currentUser.id),
+        supabase.from('month_configs').select('*').eq('user_id', currentUser.id),
+      ]);
 
-  const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const saved = localStorage.getItem('easyfinance_transactions');
-    return saved ? JSON.parse(saved) : [];
-  });
+      if (txs) setTransactions(txs);
+      if (cats && cats.length > 0) setCategories(cats);
+      if (crds) setCards(crds);
+      if (gls) setGoals(gls);
+      if (fixed) setFixedEntries(fixed);
+      if (asts) setAssets(asts);
+      if (invs) setInvestments(invs);
+      if (mconfs) setMonthConfigs(mconfs);
+      
+      setDataLoaded(true);
+    } catch (err) {
+      console.error("Erro ao buscar dados do Supabase:", err);
+      setDataLoaded(true); // Permite uso local mesmo com erro
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentUser]);
 
-  const [assets, setAssets] = useState<Asset[]>(() => {
-    const saved = localStorage.getItem('easyfinance_assets');
-    return saved ? JSON.parse(saved) : [];
-  });
+  useEffect(() => {
+    if (currentUser) {
+      clearLocalStates();
+      fetchData();
+    } else {
+      clearLocalStates();
+    }
+  }, [currentUser, fetchData, clearLocalStates]);
 
-  const [investments, setInvestments] = useState<Investment[]>(() => {
-    const saved = localStorage.getItem('easyfinance_investments');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const syncWithSupabase = async (table: string, data: any[]) => {
+    if (!currentUser || !dataLoaded || !supabase) return;
+    
+    setIsSyncing(true);
+    try {
+      await supabase.from(table).delete().eq('user_id', currentUser.id);
+      
+      if (data.length > 0) {
+        const dataToInsert = data.map(item => ({ 
+          ...item, 
+          user_id: currentUser.id 
+        }));
+        await supabase.from(table).insert(dataToInsert);
+      }
+    } catch (err) {
+      console.error(`Erro ao sincronizar tabela ${table}:`, err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
-  const [monthConfigs, setMonthConfigs] = useState<MonthConfig[]>(() => {
-    const saved = localStorage.getItem('easyfinance_monthconfigs');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  useEffect(() => localStorage.setItem('easyfinance_categories', JSON.stringify(categories)), [categories]);
-  useEffect(() => localStorage.setItem('easyfinance_cards', JSON.stringify(cards)), [cards]);
-  useEffect(() => localStorage.setItem('easyfinance_goals', JSON.stringify(goals)), [goals]);
-  useEffect(() => localStorage.setItem('easyfinance_fixed', JSON.stringify(fixedEntries)), [fixedEntries]);
-  useEffect(() => localStorage.setItem('easyfinance_transactions', JSON.stringify(transactions)), [transactions]);
-  useEffect(() => localStorage.setItem('easyfinance_assets', JSON.stringify(assets)), [assets]);
-  useEffect(() => localStorage.setItem('easyfinance_investments', JSON.stringify(investments)), [investments]);
-  useEffect(() => localStorage.setItem('easyfinance_monthconfigs', JSON.stringify(monthConfigs)), [monthConfigs]);
+  useEffect(() => { if (dataLoaded) syncWithSupabase('transactions', transactions); }, [transactions, dataLoaded]);
+  useEffect(() => { if (dataLoaded) syncWithSupabase('categories', categories); }, [categories, dataLoaded]);
+  useEffect(() => { if (dataLoaded) syncWithSupabase('cards', cards); }, [cards, dataLoaded]);
+  useEffect(() => { if (dataLoaded) syncWithSupabase('goals', goals); }, [goals, dataLoaded]);
+  useEffect(() => { if (dataLoaded) syncWithSupabase('fixed_entries', fixedEntries); }, [fixedEntries, dataLoaded]);
+  useEffect(() => { if (dataLoaded) syncWithSupabase('assets', assets); }, [assets, dataLoaded]);
+  useEffect(() => { if (dataLoaded) syncWithSupabase('investments', investments); }, [investments, dataLoaded]);
+  useEffect(() => { if (dataLoaded) syncWithSupabase('month_configs', monthConfigs); }, [monthConfigs, dataLoaded]);
 
   const updateMonthConfig = (config: MonthConfig) => {
     setMonthConfigs(prev => {
@@ -100,7 +166,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       transactions, setTransactions,
       assets, setAssets,
       investments, setInvestments,
-      monthConfigs, updateMonthConfig
+      monthConfigs, updateMonthConfig,
+      isLoading,
+      isSyncing
     }}>
       {children}
     </FinanceContext.Provider>

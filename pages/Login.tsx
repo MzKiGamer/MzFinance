@@ -1,19 +1,24 @@
 
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { KeyRound, Mail, User as UserIcon, ShieldCheck, ArrowRight, AlertCircle, Check, X, Info } from 'lucide-react';
+import { KeyRound, Mail, User as UserIcon, ShieldCheck, AlertCircle, Check, X, Eye, EyeOff, ArrowLeft, Send, Loader2 } from 'lucide-react';
 
 type AuthMode = 'login' | 'register' | 'forgot' | 'mfa';
 
 const Login: React.FC = () => {
-  const { login, register, users } = useAuth();
+  const { login, register, users, requestPasswordReset } = useAuth();
   const [mode, setMode] = useState<AuthMode>('login');
-  const [form, setForm] = useState({ name: '', username: '', email: '', password: '' });
+  const [form, setForm] = useState({ name: '', username: '', email: '', password: '', confirmPassword: '' });
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [mfaCode, setMfaCode] = useState('');
   const [touchedEmail, setTouchedEmail] = useState(false);
+  const [touchedConfirm, setTouchedConfirm] = useState(false);
+  
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Critérios de senha baseados na imagem e boas práticas
   const passwordCriteria = useMemo(() => {
     const p = form.password;
     return {
@@ -34,6 +39,10 @@ const Login: React.FC = () => {
     return emailRegex.test(form.email);
   }, [form.email]);
 
+  const passwordsMatch = useMemo(() => {
+    return form.password === form.confirmPassword && form.password !== '';
+  }, [form.password, form.confirmPassword]);
+
   const getStrengthLabel = () => {
     if (passwordStrengthScore === 0) return { label: 'Vazio', color: 'text-gray-300' };
     if (passwordStrengthScore <= 2) return { label: 'Fraca', color: 'text-red-500' };
@@ -41,78 +50,125 @@ const Login: React.FC = () => {
     return { label: 'Forte', color: 'text-green-500' };
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccessMsg('');
+    setIsLoading(true);
 
-    if (mode === 'login') {
-      const success = login(form.username, form.password);
-      if (success) {
-        setMode('mfa');
-      } else {
-        setError('Usuário ou senha incorretos.');
-      }
-    } else if (mode === 'mfa') {
-      if (mfaCode === '123456') {
-        window.location.reload(); 
-      } else {
-        setError('Código MFA inválido. Use 123456 para testar.');
-      }
-    } else if (mode === 'register') {
-      if (!isValidEmail) {
-        setError('E-mail inválido! Por favor, utilize um formato válido (exemplo@email.com).');
-        setTouchedEmail(true);
-        return;
-      }
-
-      if (passwordStrengthScore < 5) {
-        setError('Sua senha ainda não é forte o suficiente. Atenda a todos os requisitos.');
-        return;
-      }
-
-      if (users.find(u => u.username === form.username)) {
-        setError('Este nome de usuário já está em uso.');
-        return;
-      }
-
-      register({
-        name: form.name,
-        username: form.username,
-        email: form.email,
-        passwordHash: form.password,
-        role: 'responsible',
-        permissions: {
-          canEditTransactions: true,
-          canViewPatrimony: true,
-          canEditPatrimony: true,
-          canEditGoals: true,
-          canAccessReports: true,
-          canManageSettings: true,
+    try {
+      if (mode === 'login') {
+        const success = await login(form.username, form.password);
+        if (success) {
+          setMode('mfa');
+        } else {
+          setError('Usuário ou senha incorretos.');
         }
-      });
+      } else if (mode === 'mfa') {
+        if (mfaCode === '123456') {
+          window.location.reload(); 
+        } else {
+          setError('Código MFA inválido. Use 123456 para testar.');
+        }
+      } else if (mode === 'register') {
+        if (!form.email || !isValidEmail) {
+          setError('E-mail é obrigatório e deve ser válido!');
+          setTouchedEmail(true);
+          setIsLoading(false);
+          return;
+        }
+
+        if (!passwordsMatch) {
+          setError('As senhas não coincidem.');
+          setIsLoading(false);
+          return;
+        }
+
+        if (passwordStrengthScore < 5) {
+          setError('Sua senha ainda não é forte o suficiente.');
+          setIsLoading(false);
+          return;
+        }
+
+        if (users.find(u => u.username === form.username)) {
+          setError('Este nome de usuário já está em uso.');
+          setIsLoading(false);
+          return;
+        }
+
+        await register({
+          name: form.name,
+          username: form.username,
+          email: form.email,
+          passwordHash: form.password,
+          role: 'responsible',
+          permissions: {
+            canEditTransactions: true,
+            canViewPatrimony: true,
+            canEditPatrimony: true,
+            canEditGoals: true,
+            canAccessReports: true,
+            canManageSettings: true,
+          }
+        });
+      } else if (mode === 'forgot') {
+        if (!isValidEmail) {
+          setError('Insira um e-mail válido.');
+          setIsLoading(false);
+          return;
+        }
+        
+        const result = await requestPasswordReset(form.email);
+        if (result.success) {
+          setSuccessMsg('E-mail de recuperação enviado! Verifique sua caixa de entrada e spam.');
+          setForm({ ...form, email: '' }); // Limpa o campo
+        } else {
+          setError(result.error || 'Erro ao enviar e-mail. Tente novamente mais tarde.');
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || 'Ocorreu um erro inesperado.');
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const handleBackToLogin = () => {
+    setMode('login');
+    setError('');
+    setSuccessMsg('');
   };
 
   return (
     <div className="min-h-screen bg-[#F7F7F7] flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-[480px] space-y-8 animate-in fade-in zoom-in duration-500">
         <div className="text-center space-y-2">
-          <div className="w-16 h-16 bg-[#FF385C] rounded-2xl mx-auto flex items-center justify-center text-white text-3xl font-black shadow-lg">G</div>
+          <div className="w-16 h-16 bg-[#FF385C] rounded-2xl mx-auto flex items-center justify-center text-white text-3xl font-black shadow-lg">M</div>
           <h1 className="text-2xl font-extrabold tracking-tight">
-            {mode === 'login' && 'Bem-vindo de volta'}
-            {mode === 'register' && 'Crie sua conta segura'}
-            {mode === 'mfa' && 'Verificação em duas etapas'}
+            {mode === 'login' ? 'Bem Vindo' : mode === 'register' ? 'Criar Conta' : mode === 'mfa' ? 'Verificação' : 'Recuperação'}
           </h1>
-          <p className="text-gray-500 font-medium">Gestão Financeira Easy 2.0</p>
+          <p className="text-gray-500 font-medium">Mz Finance</p>
         </div>
 
         <div className="airbnb-card p-10 shadow-2xl border-gray-100">
           <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <div className="p-4 bg-red-50 border border-red-100 text-red-600 text-xs font-bold rounded-2xl flex items-center gap-3 animate-in shake duration-300">
+                <AlertCircle size={18} /> {error}
+              </div>
+            )}
+
+            {successMsg && (
+              <div className="p-4 bg-green-50 border border-green-100 text-green-700 text-xs font-bold rounded-2xl flex items-center gap-3 animate-in fade-in duration-300">
+                <Check size={18} /> {successMsg}
+              </div>
+            )}
+
             {mode === 'mfa' ? (
               <div className="space-y-4">
                 <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex gap-3 text-blue-700 text-sm font-medium">
                   <ShieldCheck className="shrink-0" />
-                  <span>Enviamos um código para seu dispositivo confiável.</span>
+                  <span>Use o código 123456 para acessar o sistema de teste.</span>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Código de Verificação</label>
@@ -126,6 +182,40 @@ const Login: React.FC = () => {
                   />
                 </div>
               </div>
+            ) : mode === 'forgot' ? (
+              <div className="space-y-6 animate-in slide-in-from-bottom-2">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">E-mail de Cadastro</label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input 
+                      type="email"
+                      className="pl-12 bg-gray-50 border-gray-100"
+                      placeholder="e-mail@exemplo.com"
+                      value={form.email}
+                      onChange={e => setForm({...form, email: e.target.value})}
+                      disabled={isLoading}
+                      required
+                    />
+                  </div>
+                </div>
+                <button 
+                  type="submit" 
+                  disabled={isLoading}
+                  className="primary-btn w-full py-4 text-lg flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isLoading ? <Loader2 className="animate-spin" size={20} /> : <Send size={18} />}
+                  Enviar Instruções
+                </button>
+                <button 
+                  type="button" 
+                  disabled={isLoading}
+                  onClick={handleBackToLogin}
+                  className="w-full text-center text-sm font-bold text-gray-500 hover:text-black transition-colors flex items-center justify-center gap-2"
+                >
+                  <ArrowLeft size={16} /> Voltar ao Login
+                </button>
+              </div>
             ) : (
               <>
                 {mode === 'register' && (
@@ -135,148 +225,141 @@ const Login: React.FC = () => {
                       <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                       <input 
                         className="pl-12 bg-gray-50 border-gray-100"
-                        placeholder="Como quer ser chamado?"
+                        placeholder="Nome para exibição"
                         value={form.name}
                         onChange={e => setForm({...form, name: e.target.value})}
+                        disabled={isLoading}
                         required
                       />
                     </div>
                   </div>
                 )}
 
-                {(mode === 'register') && (
+                {mode === 'register' && (
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">E-mail Corporativo/Pessoal</label>
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">E-mail de Cadastro</label>
                     <div className="relative">
                       <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 ${(touchedEmail || form.email) && !isValidEmail ? 'text-red-500' : 'text-gray-400'}`} size={18} />
                       <input 
                         type="email"
                         onBlur={() => setTouchedEmail(true)}
-                        className={`pl-12 bg-gray-50 border-gray-100 ${(touchedEmail || form.email) && !isValidEmail ? 'border-red-300 ring-2 ring-red-50' : ''} transition-all`}
-                        placeholder="email@exemplo.com"
+                        className={`pl-12 bg-gray-50 border-gray-100 ${(touchedEmail || form.email) && !isValidEmail ? 'border-red-300 ring-2 ring-red-50' : ''}`}
+                        placeholder="exemplo@email.com"
                         value={form.email}
                         onChange={e => setForm({...form, email: e.target.value})}
+                        disabled={isLoading}
                         required
                       />
                     </div>
-                    {mode === 'register' && (touchedEmail || form.email) && !isValidEmail && (
-                      <div className="flex items-center gap-1.5 mt-1.5 text-red-500">
-                        <AlertCircle size={12} />
-                        <span className="text-[10px] font-bold uppercase tracking-tight">E-mail em formato inválido</span>
-                      </div>
-                    )}
                   </div>
                 )}
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Usuário</label>
+                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Usuário de Acesso</label>
                   <div className="relative">
                     <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                     <input 
-                      className="pl-12 bg-gray-50 border-gray-100"
-                      placeholder="Identificador de login"
+                      className="pl-12 bg-gray-50 border-gray-100 font-bold"
+                      placeholder="Identificador"
                       value={form.username}
                       onChange={e => setForm({...form, username: e.target.value})}
+                      disabled={isLoading}
                       required
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <div className="flex justify-between items-center">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Senha</label>
-                  </div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Senha</label>
                   <div className="relative">
                     <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                     <input 
-                      type="password"
-                      className="pl-12 bg-gray-50 border-gray-100"
+                      type={showPassword ? "text" : "password"}
+                      className="pl-12 pr-12 bg-gray-50 border-gray-100"
                       placeholder="••••••••"
                       value={form.password}
                       onChange={e => setForm({...form, password: e.target.value})}
+                      disabled={isLoading}
                       required
                     />
+                    <button 
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
                   </div>
 
                   {mode === 'register' && form.password && (
-                    <div className="mt-4 p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-3 animate-in fade-in slide-in-from-top-2">
+                    <div className="mt-4 p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-xs font-bold text-gray-500">Força da senha</span>
+                        <span className="text-xs font-bold text-gray-500">Nível:</span>
                         <span className={`text-xs font-black uppercase ${getStrengthLabel().color}`}>
                           {getStrengthLabel().label}
                         </span>
                       </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-xs font-medium">
-                          {passwordCriteria.length ? <Check size={14} className="text-green-500" /> : <X size={14} className="text-gray-300" />}
-                          <span className={passwordCriteria.length ? 'text-gray-700' : 'text-gray-400'}>Mínimo de 8 caracteres</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs font-medium">
-                          {passwordCriteria.uppercase ? <Check size={14} className="text-green-500" /> : <X size={14} className="text-gray-300" />}
-                          <span className={passwordCriteria.uppercase ? 'text-gray-700' : 'text-gray-400'}>Uma letra maiúscula</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs font-medium">
-                          {passwordCriteria.lowercase ? <Check size={14} className="text-green-500" /> : <X size={14} className="text-gray-300" />}
-                          <span className={passwordCriteria.lowercase ? 'text-gray-700' : 'text-gray-400'}>Uma letra minúscula</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs font-medium">
-                          {passwordCriteria.number ? <Check size={14} className="text-green-500" /> : <X size={14} className="text-gray-300" />}
-                          <span className={passwordCriteria.number ? 'text-gray-700' : 'text-gray-400'}>Um número</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs font-medium">
-                          {passwordCriteria.special ? <Check size={14} className="text-green-500" /> : <X size={14} className="text-gray-300" />}
-                          <span className={passwordCriteria.special ? 'text-gray-700' : 'text-gray-400'}>Um caractere especial (@, #, etc)</span>
-                        </div>
+                      <div className="w-full bg-gray-200 h-1 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full transition-all duration-300 ${passwordStrengthScore <= 2 ? 'bg-red-500' : passwordStrengthScore <= 4 ? 'bg-yellow-500' : 'bg-green-500'}`}
+                          style={{ width: `${(passwordStrengthScore / 5) * 100}%` }}
+                        />
                       </div>
                     </div>
                   )}
                 </div>
+
+                {mode === 'register' && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Confirmar Senha</label>
+                    <div className="relative">
+                      <KeyRound className={`absolute left-4 top-1/2 -translate-y-1/2 ${(touchedConfirm || form.confirmPassword) && !passwordsMatch ? 'text-red-500' : 'text-gray-400'}`} size={18} />
+                      <input 
+                        type={showConfirmPassword ? "text" : "password"}
+                        onBlur={() => setTouchedConfirm(true)}
+                        className={`pl-12 pr-12 bg-gray-50 border-gray-100 ${(touchedConfirm || form.confirmPassword) && !passwordsMatch ? 'border-red-300 ring-2 ring-red-50' : ''}`}
+                        placeholder="Repita a senha"
+                        value={form.confirmPassword}
+                        onChange={e => setForm({...form, confirmPassword: e.target.value})}
+                        disabled={isLoading}
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
               </>
             )}
 
-            {error && (
-              <div className="text-red-500 text-xs font-bold bg-red-50 p-4 rounded-xl border border-red-100 flex items-start gap-3 animate-in shake duration-300">
-                <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                <span>{error}</span>
-              </div>
+            {mode !== 'forgot' && (
+              <button 
+                type="submit" 
+                disabled={isLoading}
+                className="primary-btn w-full py-4 text-lg mt-4 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isLoading ? <Loader2 className="animate-spin" size={20} /> : (mode === 'login' ? 'Entrar' : mode === 'register' ? 'Criar Conta' : 'Verificar')}
+              </button>
             )}
-
-            <button 
-              type="submit" 
-              disabled={mode === 'register' && (passwordStrengthScore < 5 || !isValidEmail)}
-              className={`primary-btn w-full py-4 text-lg rounded-2xl flex items-center justify-center gap-2 group transition-all disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed shadow-lg shadow-red-100`}
-            >
-              {mode === 'login' ? 'Continuar' : mode === 'register' ? 'Criar Conta Segura' : 'Verificar'}
-              <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-            </button>
           </form>
 
-          <div className="mt-8 pt-8 border-t border-gray-100 text-center">
+          <div className="mt-8 pt-8 border-t border-gray-100 flex flex-col items-center gap-4">
             {mode === 'login' ? (
-              <p className="text-gray-500 text-sm font-medium">
-                Novo por aqui? <button onClick={() => setMode('register')} className="text-black font-extrabold hover:underline">Cadastre-se</button>
-              </p>
-            ) : mode === 'register' ? (
-              <p className="text-gray-500 text-sm font-medium">
-                Já tem conta? <button onClick={() => setMode('login')} className="text-black font-extrabold hover:underline">Fazer Login</button>
-              </p>
-            ) : (
-              <button onClick={() => setMode('login')} className="text-xs font-bold text-gray-400 hover:text-black transition-colors">VOLTAR PARA LOGIN</button>
+              <>
+                <button onClick={() => setMode('register')} className="text-sm font-bold text-gray-500 hover:text-black">
+                  Novo por aqui? <span className="text-[#FF385C]">Criar conta grátis</span>
+                </button>
+                <button 
+                  onClick={() => setMode('forgot')}
+                  className="text-[11px] font-black uppercase text-gray-300 tracking-widest hover:text-gray-500"
+                >
+                  Esqueci minha senha
+                </button>
+              </>
+            ) : mode === 'forgot' ? null : (
+              <button onClick={handleBackToLogin} className="text-sm font-bold text-gray-500 hover:text-black">
+                Já tem uma conta? <span className="text-[#FF385C]">Ir para o Login</span>
+              </button>
             )}
           </div>
-        </div>
-
-        <div className="flex flex-col items-center gap-4">
-           <div className="flex items-center gap-2 text-gray-400">
-              <ShieldCheck size={16} />
-              <span className="text-[10px] font-black uppercase tracking-widest">Proteção com MFA e Criptografia AES-256</span>
-           </div>
-           <div className="flex gap-4 opacity-30 grayscale hover:opacity-100 transition-opacity">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" className="h-4" alt="PayPal Secure" />
-              <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" className="h-4" alt="Visa" />
-              <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" className="h-4" alt="Mastercard" />
-           </div>
         </div>
       </div>
     </div>

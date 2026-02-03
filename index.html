@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão Financeira</title>
+    <title>Mz Finance</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,32 +15,24 @@
             background-color: #F7F7F7;
             color: #222222;
             letter-spacing: -0.01em;
+            font-size: 18px; /* Aumentado em 2px do padrão 16px */
         }
         .airbnb-card {
             background: white;
-            border-radius: 16px;
+            border-radius: 20px;
             border: 1px solid #EBEBEB;
             transition: all 0.2s ease-in-out;
         }
         .airbnb-card:hover {
-            box-shadow: 0 8px 20px rgba(0,0,0,0.06);
-        }
-        .nav-pill {
-            transition: all 0.2s;
-        }
-        .nav-pill.active {
-            background-color: #000000;
-            color: #FFFFFF;
-        }
-        .nav-pill:not(.active):hover {
-            background-color: #F1F1F1;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
         }
         input, select, textarea {
             border: 1px solid #EBEBEB;
-            border-radius: 12px;
-            padding: 12px 16px;
+            border-radius: 14px;
+            padding: 14px 18px;
             width: 100%;
             background-color: #F9F9F9;
+            font-size: 16px;
         }
         input:focus, select:focus, textarea:focus {
             outline: none;
@@ -51,17 +43,51 @@
             background-color: #FF385C;
             color: white;
             font-weight: 700;
-            padding: 12px 24px;
-            border-radius: 12px;
+            padding: 14px 28px;
+            border-radius: 14px;
             transition: transform 0.1s;
+            font-size: 17px;
         }
         .primary-btn:active {
             transform: scale(0.98);
         }
+        .text-xs { font-size: 0.85rem; } /* ~13.6px */
+        .text-sm { font-size: 1rem; }    /* ~16px */
+        .text-base { font-size: 1.125rem; } /* ~18px */
+        .text-lg { font-size: 1.25rem; }    /* ~20px */
+        .text-xl { font-size: 1.5rem; }     /* ~24px */
+        .text-2xl { font-size: 1.75rem; }    /* ~28px */
+        .text-3xl { font-size: 1.875rem; }   /* ~30px */
+        .text-4xl { font-size: 2.25rem; }    /* ~36px */
+        
         /* Custom scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #DDD; border-radius: 10px; }
+
+        /* Print Styles */
+        @media print {
+            header, nav, button, .no-print {
+                display: none !important;
+            }
+            body {
+                background-color: white !important;
+                padding: 0 !important;
+            }
+            main {
+                padding: 0 !important;
+                margin: 0 !important;
+                max-width: 100% !important;
+            }
+            .airbnb-card {
+                border: 1px solid #EEE !important;
+                box-shadow: none !important;
+                break-inside: avoid;
+            }
+            h1, h2, h3 {
+                color: black !important;
+            }
+        }
     </style>
 <script type="importmap">
 {
@@ -71,7 +97,11 @@
     "react/": "https://esm.sh/react@^19.2.3/",
     "react": "https://esm.sh/react@^19.2.3",
     "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "react-router-dom": "https://esm.sh/react-router-dom@^7.11.0"
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.11.0",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.48.1",
+    "xlsx": "https://esm.sh/xlsx@0.18.5",
+    "jspdf": "https://esm.sh/jspdf@2.5.1",
+    "jspdf-autotable": "https://esm.sh/jspdf-autotable@3.8.2"
   }
 }
 </script>

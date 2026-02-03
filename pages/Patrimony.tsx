@@ -1,19 +1,21 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useFinance } from '../context/FinanceContext';
+import { useLanguage } from '../context/LanguageContext';
 import { INVESTMENT_TYPES } from '../constants';
-import { Plus, Trash2 } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { Plus, Trash2, Pencil, X, Building2, TrendingUp } from 'lucide-react';
 import { Asset, Investment } from '../types';
 
 const Patrimony: React.FC = () => {
   const { assets, investments, setAssets, setInvestments } = useFinance();
+  const { t, language } = useLanguage();
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [isAddingAsset, setIsAddingAsset] = useState(false);
+  const [editingInvestment, setEditingInvestment] = useState<Investment | null>(null);
   const [isAddingInvestment, setIsAddingInvestment] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    // Pequeno atraso para garantir que o layout CSS do container esteja pronto
     const timer = setTimeout(() => setIsClient(true), 150);
     return () => clearTimeout(timer);
   }, []);
@@ -22,145 +24,168 @@ const Patrimony: React.FC = () => {
     return assets.reduce((a, b) => a + b.value, 0) + investments.reduce((a, b) => a + b.value, 0);
   }, [assets, investments]);
 
-  const investmentData = useMemo(() => {
-    const data: Record<string, number> = {};
-    investments.forEach(i => { data[i.type] = (data[i.type] || 0) + i.value; });
-    return Object.entries(data).map(([name, value]) => ({ name, value }));
-  }, [investments]);
-
   const formatCurrency = (val: number) => 
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+    new Intl.NumberFormat(language === 'pt' ? 'pt-BR' : 'en-US', { 
+        style: 'currency', 
+        currency: language === 'pt' ? 'BRL' : 'USD' 
+    }).format(val);
 
-  const COLORS = ['#FF385C', '#10b981', '#2c3e50', '#6366f1', '#f59e0b', '#ec4899', '#06b6d4'];
-
-  const handleDeleteAsset = (id: string) => {
-    setAssets(prev => prev.filter(a => a.id !== id));
+  const handleSaveAsset = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const newAsset: Asset = {
+      id: editingAsset ? editingAsset.id : crypto.randomUUID(),
+      description: fd.get('description') as string,
+      bank: fd.get('bank') as string,
+      value: Number(fd.get('value')),
+      updatedAt: new Date().toLocaleDateString(language === 'pt' ? 'pt-BR' : 'en-US'),
+      liquidity: fd.get('liquidity') as any,
+      canTouch: fd.get('canTouch') === 'on' ? 'Sim' : 'Não'
+    };
+    if (editingAsset) {
+      setAssets(prev => prev.map(a => a.id === newAsset.id ? newAsset : a));
+    } else {
+      setAssets(prev => [...prev, newAsset]);
+    }
+    setIsAddingAsset(false);
+    setEditingAsset(null);
   };
 
-  const handleDeleteInv = (id: string) => {
-    setInvestments(prev => prev.filter(i => i.id !== id));
+  const handleSaveInvestment = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const newInv: Investment = {
+      id: editingInvestment ? editingInvestment.id : crypto.randomUUID(),
+      type: fd.get('type') as any,
+      category: fd.get('category') as string,
+      broker: fd.get('broker') as string,
+      value: Number(fd.get('value')),
+      updatedAt: new Date().toLocaleDateString(language === 'pt' ? 'pt-BR' : 'en-US')
+    };
+    if (editingInvestment) {
+      setInvestments(prev => prev.map(i => i.id === newInv.id ? newInv : i));
+    } else {
+      setInvestments(prev => [...prev, newInv]);
+    }
+    setIsAddingInvestment(false);
+    setEditingInvestment(null);
   };
 
   return (
-    <div className="space-y-12 animate-in fade-in duration-700 max-w-[1200px] mx-auto pb-20">
-      <div className="text-center py-12">
-        <span className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em] block mb-4">Patrimônio Total</span>
-        <h1 className="text-6xl font-black text-[#222222] tracking-tighter">
+    <div className="space-y-8 md:space-y-12 animate-in fade-in duration-700 max-w-[1200px] mx-auto pb-24 md:pb-20">
+      <div className="text-center py-6 md:py-12 px-4">
+        <span className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em] block mb-2 md:mb-4">{t('consolidatedPatrimony')}</span>
+        <h1 className={`text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter break-words ${totalPatrimony >= 0 ? 'text-green-600' : 'text-red-600'}`}>
           {formatCurrency(totalPatrimony)}
         </h1>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
         <div className="space-y-6">
           <div className="flex justify-between items-center px-2">
-            <h2 className="text-xl font-extrabold">Reservas & Bancos</h2>
-            <button 
-              onClick={() => setIsAddingAsset(true)}
-              className="bg-[#FF385C] text-white text-[10px] font-black uppercase tracking-widest px-6 py-2 rounded-xl flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all"
-            >
-              <Plus size={14} /> Adicionar
-            </button>
+            <h2 className="text-lg md:text-xl font-extrabold flex items-center gap-2"><Building2 size={20} className="text-gray-400" /> {t('reserves')}</h2>
+            <button onClick={() => { setEditingAsset(null); setIsAddingAsset(true); }} className="bg-black text-white text-[10px] font-black uppercase px-4 py-2 rounded-xl flex items-center gap-2"><Plus size={14} /> {t('newAsset')}</button>
           </div>
-          
           <div className="space-y-4">
-            {assets.length > 0 ? assets.map(asset => (
-              <div key={asset.id} className="airbnb-card p-6 flex justify-between items-center group">
-                <div>
-                  <h4 className="font-extrabold text-lg">{asset.description}</h4>
-                  <p className="text-xs text-gray-400 font-bold uppercase">{asset.bank} • {asset.liquidity}</p>
+            {assets.map(asset => (
+              <div key={asset.id} className="airbnb-card p-5 md:p-6 flex justify-between items-center group">
+                <div className="min-w-0 pr-4">
+                  <h4 className="font-extrabold text-base md:text-lg truncate">{asset.description}</h4>
+                  <p className="text-[9px] md:text-[10px] text-gray-400 font-black uppercase tracking-wider truncate">
+                    {asset.bank} • {t('liquidity')}: {asset.liquidity}
+                  </p>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <div className="font-extrabold text-xl mb-1">{formatCurrency(asset.value)}</div>
-                    <span className="bg-green-50 text-green-600 text-[10px] font-black uppercase px-2 py-1 rounded-md">Disponível</span>
-                  </div>
-                  <button onClick={() => handleDeleteAsset(asset.id)} className="text-gray-200 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
-                    <Trash2 size={16} />
-                  </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="text-right mr-2"><div className={`font-extrabold text-base ${asset.value >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(asset.value)}</div></div>
+                  <button onClick={() => { setEditingAsset(asset); setIsAddingAsset(true); }} className="text-gray-200 hover:text-black p-2"><Pencil size={16} /></button>
                 </div>
               </div>
-            )) : (
-              <div className="airbnb-card p-8 text-center text-gray-400 font-bold italic">Sem reservas cadastradas.</div>
-            )}
+            ))}
           </div>
         </div>
 
         <div className="space-y-6">
           <div className="flex justify-between items-center px-2">
-            <h2 className="text-xl font-extrabold">Investimentos</h2>
-            <button 
-              onClick={() => setIsAddingInvestment(true)}
-              className="bg-[#FF385C] text-white text-[10px] font-black uppercase tracking-widest px-6 py-2 rounded-xl flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all"
-            >
-              <Plus size={14} /> Adicionar
-            </button>
+            <h2 className="text-lg md:text-xl font-extrabold flex items-center gap-2"><TrendingUp size={20} className="text-gray-400" /> {t('investments')}</h2>
+            <button onClick={() => { setEditingInvestment(null); setIsAddingInvestment(true); }} className="bg-black text-white text-[10px] font-black uppercase px-4 py-2 rounded-xl flex items-center gap-2"><Plus size={14} /> {t('newInvestment')}</button>
           </div>
-
           <div className="airbnb-card overflow-hidden">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-[#F9F9F9] text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
-                  <th className="px-6 py-4">Ativo</th>
-                  <th className="px-6 py-4 text-right">Valor</th>
-                  <th className="px-6 py-4"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {investments.map(inv => (
-                  <tr key={inv.id} className="group hover:bg-gray-50">
-                    <td className="px-6 py-5">
-                       <div className="flex flex-col">
-                         <span className="font-extrabold text-sm">{inv.category || 'Ativo'}</span>
-                         <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">{inv.type}</span>
-                       </div>
-                    </td>
-                    <td className="px-6 py-5 text-right font-extrabold text-sm">{formatCurrency(inv.value)}</td>
-                    <td className="px-6 py-5 text-right">
-                      <button onClick={() => handleDeleteInv(inv.id)} className="text-gray-200 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {investments.length === 0 && (
-                  <tr><td colSpan={3} className="p-8 text-center text-gray-400 font-bold italic">Sem investimentos cadastrados.</td></tr>
-                )}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left min-w-[350px]">
+                <thead>
+                  <tr className="bg-gray-50 text-[10px] font-black text-gray-400 uppercase border-b"><th className="px-5 py-4">{t('description')}</th><th className="px-5 py-4 text-right">{t('value')}</th><th className="px-5 py-4"></th></tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {investments.map(inv => (
+                    <tr key={inv.id} className="group hover:bg-gray-50">
+                      <td className="px-5 py-5">
+                        <div className="flex flex-col min-w-0"><span className="font-extrabold text-sm truncate">{inv.category || 'Ativo'}</span><span className="text-[10px] text-gray-400 font-bold uppercase">{inv.type} • {inv.broker}</span></div>
+                      </td>
+                      <td className="px-5 py-5 text-right font-extrabold text-sm text-green-600">{formatCurrency(inv.value)}</td>
+                      <td className="px-5 py-5 text-right whitespace-nowrap">
+                        <button onClick={() => { setEditingInvestment(inv); setIsAddingInvestment(true); }} className="text-gray-200 hover:text-black p-2"><Pencil size={16} /></button>
+                        <button onClick={() => setInvestments(prev => prev.filter(i => i.id !== inv.id))} className="text-gray-200 hover:text-red-500 p-2"><Trash2 size={16} /></button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="airbnb-card p-10 mt-12">
-        <h2 className="text-2xl font-extrabold mb-12">Alocação de Ativos</h2>
-        <div className="h-80 flex items-center justify-center overflow-hidden relative" style={{ minWidth: 0, minHeight: 0 }}>
-          {isClient && investmentData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%" debounce={50}>
-              <PieChart>
-                <Pie
-                  data={investmentData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={80}
-                  outerRadius={120}
-                  paddingAngle={8}
-                  dataKey="value"
-                  stroke="none"
-                >
-                  {investmentData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-             <div className="text-gray-300 font-bold italic">Gráfico indisponível sem investimentos.</div>
-          )}
+      {isAddingAsset && (
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-[32px] w-full max-w-lg p-10 animate-in zoom-in duration-300 shadow-2xl relative">
+            <button onClick={() => { setIsAddingAsset(false); setEditingAsset(null); }} className="absolute right-6 top-6 p-2 hover:bg-gray-100 rounded-full text-gray-400"><X size={20} /></button>
+            <h2 className="text-2xl font-black mb-8 tracking-tight">{editingAsset ? t('edit') : t('newAsset')}</h2>
+            <form onSubmit={handleSaveAsset} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('description')}</label>
+                <input name="description" required defaultValue={editingAsset?.description || ""} className="font-bold text-sm" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('bank')}</label>
+                  <input name="bank" required defaultValue={editingAsset?.bank || ""} className="font-bold text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('value')}</label>
+                  <input name="value" type="number" step="0.01" required defaultValue={editingAsset?.value || ""} className="font-bold text-sm" />
+                </div>
+              </div>
+              <button type="submit" className="primary-btn w-full py-4 text-lg mt-4">{t('save')}</button>
+            </form>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Modais omitidos para brevidade, sem alterações neles */}
+      {isAddingInvestment && (
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-[32px] w-full max-w-lg p-10 animate-in zoom-in duration-300 shadow-2xl relative">
+            <button onClick={() => { setIsAddingInvestment(false); setEditingInvestment(null); }} className="absolute right-6 top-6 p-2 hover:bg-gray-100 rounded-full text-gray-400"><X size={20} /></button>
+            <h2 className="text-2xl font-black mb-8 tracking-tight">{editingInvestment ? t('edit') : t('newInvestment')}</h2>
+            <form onSubmit={handleSaveInvestment} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('broker')}</label>
+                  <input name="broker" required defaultValue={editingInvestment?.broker || ""} className="font-bold text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('value')}</label>
+                  <input name="value" type="number" step="0.01" required defaultValue={editingInvestment?.value || ""} className="font-bold text-sm" />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('assetName')}</label>
+                <input name="category" required defaultValue={editingInvestment?.category || ""} className="font-bold text-sm" />
+              </div>
+              <button type="submit" className="primary-btn w-full py-4 text-lg mt-4">{t('save')}</button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

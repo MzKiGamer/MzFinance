@@ -26,7 +26,9 @@ export interface User {
 export interface Category {
   id: string;
   name: string;
+  icon: string;
   subcategories: string;
+  isSystem?: boolean;
 }
 
 export interface Card {
@@ -69,7 +71,9 @@ export interface Transaction {
   paymentMethod: string;
   cardId?: string;
   paid: boolean;
+  paymentDate?: string;
   goalId?: string;
+  investmentId?: string;
   notes: string;
   isFixed?: boolean;
 }
