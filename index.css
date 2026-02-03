@@ -4,7 +4,7 @@ body {
     background-color: #F7F7F7;
     color: #222222;
     letter-spacing: -0.01em;
-    font-size: 18px;
+    font-size: 14px; /* Reduzido de 18px para 14px */
 }
 
 .airbnb-card {
@@ -20,11 +20,11 @@ body {
 
 input, select, textarea {
     border: 1px solid #EBEBEB;
-    border-radius: 14px;
-    padding: 14px 18px;
+    border-radius: 12px;
+    padding: 10px 14px; /* Mais compacto */
     width: 100%;
     background-color: #F9F9F9;
-    font-size: 16px;
+    font-size: 14px;
 }
 
 input:focus, select:focus, textarea:focus {
@@ -37,27 +37,27 @@ input:focus, select:focus, textarea:focus {
     background-color: #FF385C;
     color: white;
     font-weight: 700;
-    padding: 14px 28px;
-    border-radius: 14px;
+    padding: 10px 20px; /* Mais compacto */
+    border-radius: 12px;
     transition: transform 0.1s;
-    font-size: 17px;
+    font-size: 14px;
 }
 
 .primary-btn:active {
     transform: scale(0.98);
 }
 
-.text-xs { font-size: 0.85rem; }
-.text-sm { font-size: 1rem; }
-.text-base { font-size: 1.125rem; }
-.text-lg { font-size: 1.25rem; }
-.text-xl { font-size: 1.5rem; }
-.text-2xl { font-size: 1.75rem; }
-.text-3xl { font-size: 1.875rem; }
-.text-4xl { font-size: 2.25rem; }
+.text-xs { font-size: 0.75rem; } /* ~10.5px */
+.text-sm { font-size: 0.875rem; } /* ~12px */
+.text-base { font-size: 1rem; } /* 14px base */
+.text-lg { font-size: 1.125rem; } /* ~16px */
+.text-xl { font-size: 1.25rem; } /* ~18px */
+.text-2xl { font-size: 1.5rem; } /* ~21px */
+.text-3xl { font-size: 1.875rem; } /* ~26px */
+.text-4xl { font-size: 2.25rem; } /* ~32px */
 
 /* Custom scrollbar */
-::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #DDD; border-radius: 10px; }
 
