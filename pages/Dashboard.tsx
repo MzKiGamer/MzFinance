@@ -166,13 +166,18 @@ const Dashboard: React.FC = () => {
           <h3 className="text-[17px] font-black mb-4 tracking-tighter">{t('goals')}</h3>
           <div className="flex-1 space-y-4">
             {goals.slice(0, 3).map(goal => {
-              const savedValue = transactions.filter(t => t.goalId === goal.id && t.paid).reduce((acc, t) => acc + (t.type === 'Receita' ? t.value : -t.value), 0);
-              const percent = goal.targetValue > 0 ? Math.min(Math.round((savedValue / goal.targetValue) * 100), 100) : 0;
+              const txsTotal = transactions
+                .filter(t => t.goalId === goal.id && t.paid)
+                .reduce((acc, t) => acc + (t.type === 'Receita' ? t.value : -t.value), 0);
+              
+              const currentSaved = (goal.savedValue || 0) + txsTotal;
+              const percent = goal.targetValue > 0 ? Math.min(Math.round((currentSaved / goal.targetValue) * 100), 100) : 0;
+              
               return (
                 <div key={goal.id} className="space-y-1.5">
                   <div className="flex justify-between items-center text-[14px] font-bold">
                     <span className="truncate max-w-[120px] text-gray-600">{goal.icon} {goal.name}</span>
-                    <span className={`font-black ${getValueColor(savedValue)}`}>{formatCurrency(savedValue)}</span>
+                    <span className={`font-black ${getValueColor(currentSaved)}`}>{formatCurrency(currentSaved)}</span>
                   </div>
                   <div className="w-full bg-gray-50 h-1.5 rounded-full overflow-hidden border border-gray-100">
                     <div className="h-full bg-[#FF385C] rounded-full" style={{ width: `${percent}%` }} />

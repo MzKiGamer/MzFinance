@@ -16,10 +16,14 @@ const Goals: React.FC = () => {
 
   const goalsCalculated = useMemo(() => {
     return goals.map(g => {
-      const current = transactions
+      // O saldo atual é o valor inicial configurado na meta + receitas - despesas (pagas)
+      const transactionsTotal = transactions
         .filter(t => t.goalId === g.id && t.paid)
         .reduce((sum, t) => sum + (t.type === 'Receita' ? t.value : -t.value), 0);
-      return { ...g, actual: Math.max(0, current) };
+      
+      const currentBalance = (g.savedValue || 0) + transactionsTotal;
+      
+      return { ...g, actual: Math.max(0, currentBalance) };
     });
   }, [goals, transactions]);
 
@@ -43,7 +47,7 @@ const Goals: React.FC = () => {
       name: fd.get('name') as string,
       icon: selectedIcon,
       targetValue: Number(fd.get('targetValue')),
-      savedValue: editingGoal ? editingGoal.savedValue : 0
+      savedValue: Number(fd.get('savedValue')) // Valor inicial manual
     };
     if (editingGoal) {
       setGoals(prev => prev.map(g => g.id === ng.id ? ng : g));
@@ -150,9 +154,15 @@ const Goals: React.FC = () => {
                 </div>
               </div>
 
-              <div className="space-y-0.5">
-                <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('targetValue')}</label>
-                <input name="targetValue" type="number" step="0.01" defaultValue={editingGoal?.targetValue || ""} required className="font-black text-xs py-1.5 px-3" />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-0.5">
+                  <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('saved')}</label>
+                  <input name="savedValue" type="number" step="0.01" defaultValue={editingGoal?.savedValue || 0} required className="font-black text-xs py-1.5 px-3" />
+                </div>
+                <div className="space-y-0.5">
+                  <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('targetValue')}</label>
+                  <input name="targetValue" type="number" step="0.01" defaultValue={editingGoal?.targetValue || ""} required className="font-black text-xs py-1.5 px-3" />
+                </div>
               </div>
               
               <button type="submit" className="primary-btn w-full py-3 text-xs shadow-sm mt-3">{t('save')}</button>

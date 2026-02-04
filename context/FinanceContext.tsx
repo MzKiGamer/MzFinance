@@ -31,7 +31,7 @@ interface FinanceContextType {
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
-// Helpers de mapeamento
+// Helpers de mapeamento robustos
 const snakeToCamel = (str: string) => str.replace(/(_\w)/g, m => m[1].toUpperCase());
 const camelToSnake = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
 
@@ -53,9 +53,10 @@ const mapToDB = (data: any[], userId: string) => {
       newItem[camelToSnake(key)] = item[key];
     }
     newItem.user_id = userId;
-    // Garante que MonthConfig tenha um ID único para o upsert se não tiver
+    
+    // Para MonthConfigs, o ID é determinístico baseado no mês e usuário
     if (!newItem.id && newItem.month_code) {
-      newItem.id = `${userId}_${newItem.month_code}`;
+      newItem.id = `mconf_${userId}_${newItem.month_code}`;
     }
     return newItem;
   });
@@ -67,8 +68,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isSyncing, setIsSyncing] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   
-  // Refs para evitar loops de sincronização desnecessários
-  const initialLoadRef = useRef(false);
+  // Ref para controlar se o primeiro carregamento foi concluído
+  const isInitialLoadDone = useRef(false);
 
   // Estados
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
@@ -82,7 +83,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const clearLocalStates = useCallback(() => {
     setDataLoaded(false);
-    initialLoadRef.current = false;
+    isInitialLoadDone.current = false;
     setTransactions([]);
     setCategories(DEFAULT_CATEGORIES);
     setCards([]);
@@ -100,15 +101,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     
     setIsLoading(true);
-    console.log("Mz Finance: Buscando dados remotos para", currentUser.email);
+    console.debug("Mz Finance: Carregando dados da nuvem...");
     
     try {
       const fetchTable = async (table: string) => {
         const { data, error } = await supabase.from(table).select('*').eq('user_id', currentUser.id);
-        if (error) {
-          console.error(`Erro ao carregar ${table}:`, error.message);
-          return [];
-        }
+        if (error) throw error;
         return data || [];
       };
 
@@ -123,20 +121,22 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         fetchTable('month_configs'),
       ]);
 
-      if (txs.length > 0) setTransactions(mapToJS(txs));
-      if (cats.length > 0) setCategories(mapToJS(cats));
-      if (crds.length > 0) setCards(mapToJS(crds));
-      if (gls.length > 0) setGoals(mapToJS(gls));
-      if (fixed.length > 0) setFixedEntries(mapToJS(fixed));
-      if (asts.length > 0) setAssets(mapToJS(asts));
-      if (invs.length > 0) setInvestments(mapToJS(invs));
-      if (mconfs.length > 0) setMonthConfigs(mapToJS(mconfs));
+      if (txs.length) setTransactions(mapToJS(txs));
+      if (cats.length) setCategories(mapToJS(cats));
+      if (crds.length) setCards(mapToJS(crds));
+      if (gls.length) setGoals(mapToJS(gls));
+      if (fixed.length) setFixedEntries(mapToJS(fixed));
+      if (asts.length) setAssets(mapToJS(asts));
+      if (invs.length) setInvestments(mapToJS(invs));
+      if (mconfs.length) setMonthConfigs(mapToJS(mconfs));
       
-      console.log("Mz Finance: Dados carregados com sucesso. Prontos para sincronia.");
-      initialLoadRef.current = true;
+      console.debug("Mz Finance: Dados sincronizados com sucesso.");
+      isInitialLoadDone.current = true;
       setDataLoaded(true);
     } catch (err) {
-      console.error("Erro crítico no carregamento:", err);
+      console.error("Mz Finance: Erro ao carregar dados remotos:", err);
+      // Mesmo em erro, permitimos uso local
+      isInitialLoadDone.current = true;
       setDataLoaded(true);
     } finally {
       setIsLoading(false);
@@ -152,41 +152,25 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [currentUser, fetchData, clearLocalStates]);
 
   const syncWithSupabase = async (table: string, data: any[]) => {
-    // SÓ SINCRONIZA SE O CARREGAMENTO INICIAL TERMINOU
-    if (!currentUser || !initialLoadRef.current || !supabase) return;
+    // Só sincroniza se já terminou de carregar os dados iniciais
+    if (!currentUser || !isInitialLoadDone.current || !supabase) return;
     
     setIsSyncing(true);
     try {
       const dataToSync = mapToDB(data, currentUser.id);
       
-      if (dataToSync.length === 0) {
-        // Se a lista local está vazia (ex: deletou tudo), precisamos refletir isso no banco.
-        // O upsert não deleta. Em um sistema real, usaríamos um soft-delete ou sincronização de estado.
-        // Para este MVP, vamos apenas registrar que o upsert não será chamado para listas vazias.
-        setIsSyncing(false);
-        return;
-      }
-
-      console.log(`Mz Finance: Sincronizando ${dataToSync.length} itens na tabela ${table}...`);
-      
-      const { error } = await supabase
-        .from(table)
-        .upsert(dataToSync, { onConflict: 'id' });
-
-      if (error) {
-        console.error(`Falha na sincronização de ${table}:`, error.message);
-        // Opcional: Notificar o usuário que a conexão falhou
-      } else {
-        console.log(`Mz Finance: Tabela ${table} atualizada na nuvem.`);
+      if (dataToSync.length > 0) {
+        const { error } = await supabase.from(table).upsert(dataToSync, { onConflict: 'id' });
+        if (error) throw error;
       }
     } catch (err) {
-      console.error(`Erro inesperado ao sincronizar ${table}:`, err);
+      console.error(`Mz Finance: Erro ao sincronizar ${table}:`, err);
     } finally {
       setIsSyncing(false);
     }
   };
 
-  // Efeitos de Sincronização Automática (Debounced pela natureza do React useEffect)
+  // Sincronizadores individuais
   useEffect(() => { syncWithSupabase('transactions', transactions); }, [transactions]);
   useEffect(() => { syncWithSupabase('categories', categories); }, [categories]);
   useEffect(() => { syncWithSupabase('cards', cards); }, [cards]);
@@ -201,7 +185,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const idx = prev.findIndex(c => c.monthCode === config.monthCode);
       if (idx >= 0) {
         const copy = [...prev];
-        copy[idx] = config;
+        // Preserva o ID original se existir
+        copy[idx] = { ...prev[idx], ...config };
         return copy;
       }
       return [...prev, config];
