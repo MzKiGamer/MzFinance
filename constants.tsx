@@ -19,29 +19,7 @@ export const MONTHS = [
 ];
 
 export const DEFAULT_CATEGORIES: Category[] = [
-  { id: '1', name: 'Mercado', icon: '🛒', subcategories: 'Alimentos, bebidas, itens de limpeza etc' },
-  { id: '2', name: 'Necessidades', icon: '⚠️', subcategories: 'Farmácia, higiene pessoal' },
-  { id: '3', name: 'Eletrônicos', icon: '📱', subcategories: 'Computador, celular, consertos' },
-  { id: '4', name: 'Pet', icon: '🐶', subcategories: 'Ração, veterinário' },
-  { id: '5', name: 'Roupas', icon: '👚', subcategories: 'Vestuário em geral' },
-  { id: '6', name: 'Beleza', icon: '💅', subcategories: 'Salão, cremes, perfumes' },
-  { id: '7', name: 'Presente', icon: '🎁', subcategories: 'Presentes para amigos e família' },
-  { id: '8', name: 'Saúde', icon: '💊', subcategories: 'Suplementos, academia, consultas' },
-  { id: '9', name: 'Outros', icon: '🤷', subcategories: 'Gastos eventuais não planejados' },
-  { id: '10', name: 'Desenvolvimento', icon: '🧠', subcategories: 'Cursos, livros, planners' },
-  { id: '11', name: 'Transporte', icon: '🚗', subcategories: 'Uber, gasolina' },
-  { id: '12', name: 'Comida fora', icon: '🍽️', subcategories: 'Restaurantes, delivery' },
-  { id: '13', name: 'Lazer', icon: '🏖️', subcategories: 'Festas, cinema, teatro' },
-  { id: '14', name: 'Moradia', icon: '🏠', subcategories: 'Aluguel, internet, água, luz' },
-  { id: '15', name: 'Contas', icon: '🧾', subcategories: 'IPVA, IPTU, impostos' },
-  { id: '16', name: 'Investimento', icon: '📈', subcategories: 'Aportes, poupança' },
-  { id: '17', name: 'Educação', icon: '🎓', subcategories: 'Faculdade, cursos extras' },
-  { id: '18', name: 'Divida', icon: '🤝', subcategories: 'Empréstimos, renegociações' },
-  { id: '19', name: 'Negócio', icon: '💼', subcategories: 'Projetos pessoais, empresa' },
-  { id: '20', name: 'Receita', icon: '💸', subcategories: 'Salário, renda extra', isSystem: true },
-  { id: '21', name: 'Fatura do Cartão', icon: '🧾', subcategories: 'Pagamentos de fatura' },
-  { id: '22', name: 'Transferência', icon: '🔁', subcategories: 'PIX, TED enviadas' },
-  { id: '23', name: 'Uber/99', icon: '🚖', subcategories: 'Transporte por app' },
+  { id: '1', name: 'Receita', icon: '💸', subcategories: 'Salário, renda extra, rendimentos', isSystem: true },
 ];
 
 export const PAYMENT_METHODS = [
