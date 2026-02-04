@@ -33,14 +33,12 @@ const MonthlyControl: React.FC = () => {
   const [selYear, setSelYear] = useState(now.getFullYear().toString());
   const currentMonthCode = `${MONTH_CODES[selMonthIdx]}-${selYear.slice(-2)}`;
   
-  // Modais de Transação
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [paymentMethod, setPaymentMethod] = useState('Dinheiro');
   const [modalType, setModalType] = useState<TransactionType>('Despesa');
   const [modalCategoryId, setModalCategoryId] = useState('');
   
-  // Estado para Criador Rápido (Quick Add)
   const [quickAddType, setQuickAddType] = useState<'category' | 'card' | 'goal' | 'investment' | null>(null);
 
   const monthTransactions = useMemo(() => 
@@ -246,36 +244,28 @@ const MonthlyControl: React.FC = () => {
         </div>
       </div>
 
-      {/* Planning Section - Refined Slim Grade */}
+      {/* Planning Section */}
       <div className="space-y-1.5">
         <h2 className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">{t('planner')}</h2>
         <div className="airbnb-card overflow-hidden">
           <div className="p-3">
             <div className="flex flex-col lg:flex-row items-center gap-6">
-              
-              {/* Renda Acumulada - Left Fixed */}
               <div className="flex flex-col gap-0.5 min-w-[140px]">
                 <span className="text-[7px] font-black uppercase text-gray-400 tracking-[0.1em]">RENDA TOTAL</span>
                 <div className="flex items-center gap-1.5">
                   <Landmark size={14} className="text-green-600" />
-                  <span className="text-base font-black text-gray-800 tracking-tighter">{formatCurrency(stats.res)}</span>
+                  <span className="text-xl font-black text-gray-800 tracking-tighter">{formatCurrency(stats.res)}</span>
                 </div>
                 <div className={`mt-0.5 inline-block w-fit px-1.5 py-0.5 rounded-full border text-[6px] font-black uppercase tracking-widest ${totalAllocated === 100 ? 'bg-green-100 border-green-200 text-green-700' : 'bg-amber-100 border-amber-200 text-amber-700'}`}>
                   {totalAllocated}% ALOCADO
                 </div>
               </div>
-
-              {/* Vertical Divider for Desktop */}
               <div className="hidden lg:block w-[1px] h-10 bg-gray-100" />
-
-              {/* Allocation Grids - Flex Row Slim */}
               <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-                
-                {/* Necessidades */}
                 <div className="space-y-1">
                   <label className="text-[7px] font-black uppercase text-gray-400 block tracking-widest">{t('needs').toUpperCase()} (%)</label>
                   <div className="flex items-center gap-1">
-                    <div className="bg-[#F9F9F9] border border-[#F0F0F0] rounded-lg px-2 py-1 flex items-center justify-between shadow-sm focus-within:ring-1 focus-within:ring-[#FF385C]/10 transition-all w-[60px] shrink-0">
+                    <div className="bg-[#F9F9F9] border border-[#F0F0F0] rounded-lg px-2 py-1 flex items-center justify-between shadow-sm focus-within:ring-1 focus-within:ring-[#FF385C]/10 transition-all w-[60px] shrink-0 min-h-[38px]">
                       <input 
                         type="number" 
                         min="0" max="100"
@@ -285,17 +275,15 @@ const MonthlyControl: React.FC = () => {
                       />
                       <span className="text-gray-300 font-black text-[10px] ml-0.5">%</span>
                     </div>
-                    <div className="bg-white border border-[#F0F0F0] rounded-lg px-2.5 py-1 font-black text-green-600 text-[10px] shadow-sm truncate flex items-center flex-1 min-h-[26px]">
+                    <div className="bg-white border border-[#F0F0F0] rounded-lg px-2.5 py-1 font-black text-green-600 text-[20px] shadow-sm truncate flex items-center flex-1 min-h-[38px] tracking-tighter">
                       {formatCurrency(stats.res * (config.needsPercent / 100))}
                     </div>
                   </div>
                 </div>
-
-                {/* Poupança */}
                 <div className="space-y-1">
                   <label className="text-[7px] font-black uppercase text-gray-400 block tracking-widest">{t('savings').toUpperCase()} (%)</label>
                   <div className="flex items-center gap-1">
-                    <div className="bg-[#F9F9F9] border border-[#F0F0F0] rounded-lg px-2 py-1 flex items-center justify-between shadow-sm focus-within:ring-1 focus-within:ring-[#FF385C]/10 transition-all w-[60px] shrink-0">
+                    <div className="bg-[#F9F9F9] border border-[#F0F0F0] rounded-lg px-2 py-1 flex items-center justify-between shadow-sm focus-within:ring-1 focus-within:ring-[#FF385C]/10 transition-all w-[60px] shrink-0 min-h-[38px]">
                       <input 
                         type="number" 
                         min="0" max="100"
@@ -305,17 +293,15 @@ const MonthlyControl: React.FC = () => {
                       />
                       <span className="text-gray-300 font-black text-[10px] ml-0.5">%</span>
                     </div>
-                    <div className="bg-white border border-[#F0F0F0] rounded-lg px-2.5 py-1 font-black text-green-600 text-[10px] shadow-sm truncate flex items-center flex-1 min-h-[26px]">
+                    <div className="bg-white border border-[#F0F0F0] rounded-lg px-2.5 py-1 font-black text-green-600 text-[20px] shadow-sm truncate flex items-center flex-1 min-h-[38px] tracking-tighter">
                       {formatCurrency(stats.res * (config.savingsPercent / 100))}
                     </div>
                   </div>
                 </div>
-
-                {/* Desejos */}
                 <div className="space-y-1">
                   <label className="text-[7px] font-black uppercase text-gray-400 block tracking-widest">{t('wants').toUpperCase()} (%)</label>
                   <div className="flex items-center gap-1">
-                    <div className="bg-[#F9F9F9] border border-[#F0F0F0] rounded-lg px-2 py-1 flex items-center justify-between shadow-sm focus-within:ring-1 focus-within:ring-[#FF385C]/10 transition-all w-[60px] shrink-0">
+                    <div className="bg-[#F9F9F9] border border-[#F0F0F0] rounded-lg px-2 py-1 flex items-center justify-between shadow-sm focus-within:ring-1 focus-within:ring-[#FF385C]/10 transition-all w-[60px] shrink-0 min-h-[38px]">
                       <input 
                         type="number" 
                         min="0" max="100"
@@ -325,12 +311,11 @@ const MonthlyControl: React.FC = () => {
                       />
                       <span className="text-gray-300 font-black text-[10px] ml-0.5">%</span>
                     </div>
-                    <div className="bg-white border border-[#F0F0F0] rounded-lg px-2.5 py-1 font-black text-green-600 text-[10px] shadow-sm truncate flex items-center flex-1 min-h-[26px]">
+                    <div className="bg-white border border-[#F0F0F0] rounded-lg px-2.5 py-1 font-black text-green-600 text-[20px] shadow-sm truncate flex items-center flex-1 min-h-[38px] tracking-tighter">
                       {formatCurrency(stats.res * (config.desiresPercent / 100))}
                     </div>
                   </div>
                 </div>
-
               </div>
             </div>
           </div>
@@ -359,53 +344,44 @@ const MonthlyControl: React.FC = () => {
             const investment = investments.find(i => i.id === tx.investmentId);
 
             return (
-              <div key={tx.id} className={`airbnb-card p-2 md:p-3 border-l-[3px] transition-all flex flex-col md:flex-row items-center justify-between gap-2 ${tx.paid ? 'bg-white opacity-95 shadow-sm' : 'bg-white shadow-md'} ${tx.type === 'Receita' ? 'border-l-green-500' : 'border-l-red-500'}`}>
-                <div className="flex items-center gap-3 w-full md:w-auto min-w-0">
+              <div key={tx.id} className={`airbnb-card px-4 py-2 border-l-[2px] transition-all grid grid-cols-1 md:grid-cols-12 items-center gap-3 ${tx.paid ? 'bg-white opacity-95 shadow-sm' : 'bg-white shadow-md'} ${tx.type === 'Receita' ? 'border-l-green-500' : 'border-l-red-500'}`}>
+                
+                <div className="md:col-span-4 flex items-center gap-3 min-w-0">
                   <button 
                     onClick={() => handleTogglePaid(tx)}
-                    className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center transition-all shrink-0 ${tx.paid ? 'bg-green-100 text-green-600 border-2 border-green-200' : 'bg-gray-50 text-gray-200 border-2 border-dashed border-gray-100'}`}
+                    className={`w-7 h-7 rounded-full flex items-center justify-center transition-all shrink-0 ${tx.paid ? 'bg-green-100 text-green-600 border-2 border-green-200' : 'bg-gray-50 text-gray-200 border-2 border-dashed border-gray-100'}`}
                   >
-                    <CheckCircle2 size={tx.paid ? 16 : 14} />
+                    <CheckCircle2 size={14} />
                   </button>
-                  
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mb-0.5">
-                      <span className="text-[7px] font-black uppercase text-gray-400 tracking-widest">{t('day')} {tx.day}</span>
-                      {tx.paid && tx.paymentDate && (
-                        <span className="text-[8px] font-black text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full flex items-center gap-1 uppercase tracking-tighter border border-green-100/50">
-                          <CalendarIcon size={8} /> {tx.paymentDate}
-                        </span>
-                      )}
-                    </div>
-                    
-                    <h4 className="font-extrabold text-xs md:text-sm text-gray-800 truncate leading-tight tracking-tight mb-0.5">{tx.description}</h4>
-                    
-                    <div className="flex flex-wrap items-center gap-1">
-                      {category && (
-                        <div className="flex items-center gap-1 text-[7px] font-black uppercase text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">
-                          <span>{category.icon} {category.name}</span>
-                        </div>
-                      )}
-                      {goal && (
-                        <div className="flex items-center gap-1 text-[7px] font-black uppercase text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
-                          <span>{goal.icon} {goal.name}</span>
-                        </div>
-                      )}
-                      {investment && (
-                        <div className="flex items-center gap-1 text-[7px] font-black uppercase text-purple-500 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-100">
-                          <span>{investment.type}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  <h4 className="font-extrabold text-xs text-gray-800 truncate leading-tight tracking-tight">{tx.description}</h4>
                 </div>
 
-                <div className="flex items-center justify-between md:justify-end w-full md:w-auto gap-4 md:gap-6">
-                  <span className={`text-sm md:text-base font-black whitespace-nowrap tracking-tight ${tx.type === 'Receita' ? 'text-green-600' : 'text-red-600'}`}>
+                <div className="md:col-span-5 flex flex-wrap items-center justify-center gap-2">
+                  <div className="flex items-center gap-1 text-[8px] font-black text-green-600 bg-green-50/60 px-2 py-0.5 rounded-full border border-green-100">
+                    <CalendarIcon size={10} className="shrink-0" />
+                    <span>{tx.paymentDate || `Dia ${tx.day}`}</span>
+                  </div>
+
+                  {category && (
+                    <div className="flex items-center gap-1.5 text-[8px] font-black uppercase text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100">
+                      <TagIcon size={10} className="text-gray-400 shrink-0" />
+                      <span className="flex items-center gap-1">{category.icon} {category.name}</span>
+                    </div>
+                  )}
+
+                  {goal && (
+                    <div className="flex items-center gap-1 text-[7px] font-black uppercase text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                      <span>{goal.icon} {goal.name}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="md:col-span-3 flex items-center justify-end gap-5">
+                  <span className={`text-sm font-black whitespace-nowrap tracking-tight ${tx.type === 'Receita' ? 'text-green-600' : 'text-red-600'}`}>
                     {tx.type === 'Receita' ? '+' : '-'} {formatCurrency(tx.value)}
                   </span>
                   
-                  <div className="flex items-center gap-0.5">
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 md:opacity-100 transition-opacity">
                     <button 
                       onClick={() => { setEditingTransaction(tx); setIsModalOpen(true); }} 
                       className="p-1.5 text-gray-300 hover:text-black transition-all rounded-lg hover:bg-gray-50"
@@ -432,7 +408,6 @@ const MonthlyControl: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Transaction Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-[24px] w-full max-w-md p-6 md:p-8 shadow-2xl animate-in zoom-in duration-300 relative my-auto">
