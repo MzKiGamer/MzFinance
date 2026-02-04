@@ -351,33 +351,33 @@ const MonthlyControl: React.FC = () => {
                     onClick={() => handleTogglePaid(tx)}
                     className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shrink-0 ${tx.paid ? 'bg-green-100 text-green-600 border-2 border-green-200' : 'bg-gray-50 text-gray-200 border-2 border-dashed border-gray-100'}`}
                   >
-                    <CheckCircle2 size={16} />
+                    <CheckCircle2 size={20} />
                   </button>
                   <h4 className="font-extrabold text-[17px] text-gray-800 truncate leading-tight tracking-tight">{tx.description}</h4>
                 </div>
 
                 <div className="md:col-span-5 flex flex-wrap items-center justify-center gap-3">
-                  <div className="flex items-center gap-2 text-[19px] font-black text-green-600 bg-green-50/60 px-4 py-1.5 rounded-full border border-green-100">
+                  <div className="flex items-center gap-2 text-[15px] font-black text-green-600 bg-green-50/60 px-4 py-1.5 rounded-full border border-green-100">
                     <CalendarIcon size={16} className="shrink-0" />
                     <span>{tx.paymentDate || `Dia ${tx.day}`}</span>
                   </div>
 
                   {category && (
-                    <div className="flex items-center gap-2 text-[19px] font-black uppercase text-gray-500 bg-gray-50 px-4 py-1.5 rounded-full border border-gray-100">
+                    <div className="flex items-center gap-2 text-[15px] font-black uppercase text-gray-500 bg-gray-50 px-4 py-1.5 rounded-full border border-gray-100">
                       <TagIcon size={16} className="text-gray-400 shrink-0" />
                       <span className="flex items-center gap-2">{category.icon} {category.name}</span>
                     </div>
                   )}
 
                   {goal && (
-                    <div className="flex items-center gap-2 text-[19px] font-black uppercase text-blue-500 bg-blue-50 px-4 py-1.5 rounded-full border border-blue-100">
+                    <div className="flex items-center gap-2 text-[15px] font-black uppercase text-blue-500 bg-blue-50 px-4 py-1.5 rounded-full border border-blue-100">
                       <span>{goal.icon} {goal.name}</span>
                     </div>
                   )}
                 </div>
 
                 <div className="md:col-span-3 flex items-center justify-end gap-6">
-                  <span className={`text-[19px] font-black whitespace-nowrap tracking-tight ${tx.type === 'Receita' ? 'text-green-600' : 'text-red-600'}`}>
+                  <span className={`text-[15px] font-black whitespace-nowrap tracking-tight ${tx.type === 'Receita' ? 'text-green-600' : 'text-red-600'}`}>
                     {tx.type === 'Receita' ? '+' : '-'} {formatCurrency(tx.value)}
                   </span>
                   
@@ -386,13 +386,13 @@ const MonthlyControl: React.FC = () => {
                       onClick={() => { setEditingTransaction(tx); setIsModalOpen(true); }} 
                       className="p-2 text-gray-300 hover:text-black transition-all rounded-lg hover:bg-gray-50"
                     >
-                      <Pencil size={16} />
+                      <Pencil size={20} />
                     </button>
                     <button 
                       onClick={() => setTransactions(prev => prev.filter(t => t.id !== tx.id))} 
                       className="p-2 text-gray-300 hover:text-red-500 transition-all rounded-lg hover:bg-gray-50"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={20} />
                     </button>
                   </div>
                 </div>
