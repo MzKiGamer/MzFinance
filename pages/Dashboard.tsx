@@ -28,7 +28,6 @@ const Dashboard: React.FC = () => {
     window.addEventListener('resize', handleResize);
     return () => {
       clearTimeout(timer);
-      // Fix: Use standard removeEventListener to cleanup resize event listener
       window.removeEventListener('resize', handleResize);
     };
   }, []);
@@ -168,7 +167,7 @@ const Dashboard: React.FC = () => {
             {goals.slice(0, 3).map(goal => {
               const txsTotal = transactions
                 .filter(t => t.goalId === goal.id && t.paid)
-                .reduce((acc, t) => acc + (t.type === 'Receita' ? t.value : -t.value), 0);
+                .reduce((acc, t) => acc + t.value, 0); // Soma receitas e despesas vinculadas
               
               const currentSaved = (goal.savedValue || 0) + txsTotal;
               const percent = goal.targetValue > 0 ? Math.min(Math.round((currentSaved / goal.targetValue) * 100), 100) : 0;

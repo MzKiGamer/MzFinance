@@ -16,10 +16,10 @@ const Goals: React.FC = () => {
 
   const goalsCalculated = useMemo(() => {
     return goals.map(g => {
-      // O saldo atual é o valor inicial configurado na meta + receitas - despesas (pagas)
+      // O saldo atual é o valor inicial + todas as transações vinculadas (tratadas como aportes)
       const transactionsTotal = transactions
         .filter(t => t.goalId === g.id && t.paid)
-        .reduce((sum, t) => sum + (t.type === 'Receita' ? t.value : -t.value), 0);
+        .reduce((sum, t) => sum + t.value, 0); // Soma o valor independente se é receita ou despesa
       
       const currentBalance = (g.savedValue || 0) + transactionsTotal;
       
