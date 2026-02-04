@@ -412,34 +412,34 @@ const MonthlyControl: React.FC = () => {
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-[32px] w-full max-w-xl p-8 md:p-10 shadow-2xl animate-in zoom-in duration-300 relative my-auto">
             <button onClick={() => setIsModalOpen(false)} className="absolute right-6 top-6 p-2 hover:bg-gray-100 rounded-full text-gray-400 transition-colors"><X size={24} /></button>
-            <h2 className="text-[23px] font-black mb-6 tracking-tight">{editingTransaction ? t('editTransaction') : t('newTransaction')}</h2>
+            <h2 className="text-[19px] font-black mb-6 tracking-tight">{editingTransaction ? t('editTransaction') : t('newTransaction')}</h2>
             
             <form onSubmit={handleSaveTransaction} className="space-y-6">
               <div className="flex bg-gray-100 p-1 rounded-xl mb-4">
-                <button type="button" onClick={() => handleModalTypeChange('Despesa')} className={`flex-1 py-3 text-[15px] font-black rounded-lg transition-all ${modalType === 'Despesa' ? 'bg-white shadow-sm text-red-500' : 'text-gray-400 hover:text-gray-600'}`}>{t('expenses')}</button>
-                <button type="button" onClick={() => handleModalTypeChange('Receita')} className={`flex-1 py-3 text-[15px] font-black rounded-lg transition-all ${modalType === 'Receita' ? 'bg-white shadow-sm text-green-600' : 'text-gray-400 hover:text-gray-600'}`}>{t('revenues')}</button>
+                <button type="button" onClick={() => handleModalTypeChange('Despesa')} className={`flex-1 py-3 text-[11px] font-black rounded-lg transition-all ${modalType === 'Despesa' ? 'bg-white shadow-sm text-red-500' : 'text-gray-400 hover:text-gray-600'}`}>{t('expenses')}</button>
+                <button type="button" onClick={() => handleModalTypeChange('Receita')} className={`flex-1 py-3 text-[11px] font-black rounded-lg transition-all ${modalType === 'Receita' ? 'bg-white shadow-sm text-green-600' : 'text-gray-400 hover:text-gray-600'}`}>{t('revenues')}</button>
               </div>
 
               <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-2 space-y-1.5">
-                  <label className="text-[13px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('description')}</label>
-                  <input name="description" required defaultValue={editingTransaction?.description || ""} className="font-bold py-3 px-5 text-[17px] min-h-[50px]" />
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('description')}</label>
+                  <input name="description" required defaultValue={editingTransaction?.description || ""} className="font-bold py-3 px-5 text-[13px] min-h-[50px]" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[13px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('day')}</label>
-                  <input name="day" type="number" min="1" max="31" required defaultValue={editingTransaction?.day || now.getDate()} className="font-bold py-3 px-5 text-[17px] text-center min-h-[50px]" />
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('day')}</label>
+                  <input name="day" type="number" min="1" max="31" required defaultValue={editingTransaction?.day || now.getDate()} className="font-bold py-3 px-5 text-[13px] text-center min-h-[50px]" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[13px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('value')}</label>
-                  <input name="value" type="number" step="0.01" required defaultValue={editingTransaction?.value || ""} className="font-black text-[17px] py-3 px-5 min-h-[50px]" />
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('value')}</label>
+                  <input name="value" type="number" step="0.01" required defaultValue={editingTransaction?.value || ""} className="font-black text-[13px] py-3 px-5 min-h-[50px]" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[13px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('category')}</label>
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('category')}</label>
                   <div className="flex gap-2">
-                    <select name="categoryId" required value={modalCategoryId} onChange={(e) => setModalCategoryId(e.target.value)} className="font-bold py-3 px-5 text-[17px] flex-1 min-h-[50px] appearance-none">
+                    <select name="categoryId" required value={modalCategoryId} onChange={(e) => setModalCategoryId(e.target.value)} className="font-bold py-3 px-5 text-[13px] flex-1 min-h-[50px] appearance-none">
                       {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>)}
                     </select>
                     <button type="button" onClick={() => setQuickAddType('category')} className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-400 hover:text-black shrink-0 transition-colors">
@@ -451,16 +451,16 @@ const MonthlyControl: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[13px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('paymentMethod')}</label>
-                  <select name="paymentMethod" required value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="font-bold py-3 px-5 text-[17px] min-h-[50px] appearance-none">
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('paymentMethod')}</label>
+                  <select name="paymentMethod" required value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="font-bold py-3 px-5 text-[13px] min-h-[50px] appearance-none">
                     {PAYMENT_METHODS.map(m => <option key={m} value={m}>{t(m)}</option>)}
                   </select>
                 </div>
                 {paymentMethod === 'Crédito' && (
                   <div className="space-y-1.5">
-                    <label className="text-[13px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('card')}</label>
+                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('card')}</label>
                     <div className="flex gap-2">
-                      <select name="cardId" defaultValue={editingTransaction?.cardId || ""} className="flex-1 py-3 px-5 text-[17px] min-h-[50px] appearance-none">
+                      <select name="cardId" defaultValue={editingTransaction?.cardId || ""} className="flex-1 py-3 px-5 text-[13px] min-h-[50px] appearance-none">
                         <option value="">{t('select')}</option>
                         {cards.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
@@ -472,9 +472,9 @@ const MonthlyControl: React.FC = () => {
                 )}
                 {modalType === 'Receita' && (
                   <div className="space-y-1.5">
-                    <label className="text-[13px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('goals')}</label>
+                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('goals')}</label>
                     <div className="flex gap-2">
-                      <select name="goalId" defaultValue={editingTransaction?.goalId || ""} className="flex-1 py-3 px-5 text-[17px] min-h-[50px] appearance-none">
+                      <select name="goalId" defaultValue={editingTransaction?.goalId || ""} className="flex-1 py-3 px-5 text-[13px] min-h-[50px] appearance-none">
                         <option value="">{t('none')}</option>
                         {goals.map(g => <option key={g.id} value={g.id}>{g.icon} {g.name}</option>)}
                       </select>
@@ -487,9 +487,9 @@ const MonthlyControl: React.FC = () => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[13px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('investments')}</label>
+                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('investments')}</label>
                 <div className="flex gap-2">
-                  <select name="investmentId" defaultValue={editingTransaction?.investmentId || ""} className="flex-1 font-bold py-3 px-5 text-[17px] min-h-[50px] appearance-none">
+                  <select name="investmentId" defaultValue={editingTransaction?.investmentId || ""} className="flex-1 font-bold py-3 px-5 text-[13px] min-h-[50px] appearance-none">
                     <option value="">{t('none')}</option>
                     {investments.map(inv => <option key={inv.id} value={inv.id}>{inv.type} - {inv.broker} ({formatCurrency(inv.value)})</option>)}
                   </select>
@@ -501,10 +501,10 @@ const MonthlyControl: React.FC = () => {
 
               <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors">
                 <input type="checkbox" name="paid" id="paidCheck" defaultChecked={editingTransaction?.paid || false} className="w-6 h-6 rounded accent-[#FF385C]" />
-                <label htmlFor="paidCheck" className="text-[15px] font-black text-gray-600 flex-1 cursor-pointer">{t('alreadyPaid')}</label>
+                <label htmlFor="paidCheck" className="text-[11px] font-black text-gray-600 flex-1 cursor-pointer">{t('alreadyPaid')}</label>
               </div>
 
-              <button type="submit" className="primary-btn w-full py-4 text-[17px] mt-2 shadow-xl active:scale-95 transition-all">{t('save')}</button>
+              <button type="submit" className="primary-btn w-full py-4 text-[13px] mt-2 shadow-xl active:scale-95 transition-all">{t('save')}</button>
             </form>
           </div>
         </div>

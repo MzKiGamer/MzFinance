@@ -31,6 +31,32 @@ interface FinanceContextType {
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
+// Helper functions for naming convention mapping
+const snakeToCamel = (str: string) => str.replace(/(_\w)/g, m => m[1].toUpperCase());
+const camelToSnake = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+
+const mapToJS = (data: any[] | null) => {
+  if (!data) return [];
+  return data.map(item => {
+    const newItem: any = {};
+    for (let key in item) {
+      newItem[snakeToCamel(key)] = item[key];
+    }
+    return newItem;
+  });
+};
+
+const mapToDB = (data: any[], userId: string) => {
+  return data.map(item => {
+    const newItem: any = {};
+    for (let key in item) {
+      newItem[camelToSnake(key)] = item[key];
+    }
+    newItem.user_id = userId;
+    return newItem;
+  });
+};
+
 export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
@@ -61,7 +87,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const fetchData = useCallback(async () => {
     if (!currentUser || !supabase) {
-      // Se não houver supabase, marcamos como carregado para permitir uso local
       setDataLoaded(true);
       return;
     }
@@ -88,19 +113,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         supabase.from('month_configs').select('*').eq('user_id', currentUser.id),
       ]);
 
-      if (txs) setTransactions(txs);
-      if (cats && cats.length > 0) setCategories(cats);
-      if (crds) setCards(crds);
-      if (gls) setGoals(gls);
-      if (fixed) setFixedEntries(fixed);
-      if (asts) setAssets(asts);
-      if (invs) setInvestments(invs);
-      if (mconfs) setMonthConfigs(mconfs);
+      if (txs) setTransactions(mapToJS(txs));
+      if (cats && cats.length > 0) setCategories(mapToJS(cats));
+      if (crds) setCards(mapToJS(crds));
+      if (gls) setGoals(mapToJS(gls));
+      if (fixed) setFixedEntries(mapToJS(fixed));
+      if (asts) setAssets(mapToJS(asts));
+      if (invs) setInvestments(mapToJS(invs));
+      if (mconfs) setMonthConfigs(mapToJS(mconfs));
       
       setDataLoaded(true);
     } catch (err) {
-      console.error("Erro ao buscar dados do Supabase:", err);
-      setDataLoaded(true); // Permite uso local mesmo com erro
+      console.error("Erro ao carregar dados:", err);
+      setDataLoaded(true);
     } finally {
       setIsLoading(false);
     }
@@ -108,7 +133,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   useEffect(() => {
     if (currentUser) {
-      clearLocalStates();
       fetchData();
     } else {
       clearLocalStates();
@@ -120,22 +144,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     
     setIsSyncing(true);
     try {
-      await supabase.from(table).delete().eq('user_id', currentUser.id);
-      
       if (data.length > 0) {
-        const dataToInsert = data.map(item => ({ 
-          ...item, 
-          user_id: currentUser.id 
-        }));
-        await supabase.from(table).insert(dataToInsert);
+        const dataToSync = mapToDB(data, currentUser.id);
+        const { error } = await supabase.from(table).upsert(dataToSync, { onConflict: 'id' });
+        if (error) throw error;
       }
     } catch (err) {
-      console.error(`Erro ao sincronizar tabela ${table}:`, err);
+      console.error(`Erro ao sincronizar ${table}:`, err);
     } finally {
       setIsSyncing(false);
     }
   };
 
+  // Sync effects - only trigger after dataLoaded is true to prevent overwriting with initial empty states
   useEffect(() => { if (dataLoaded) syncWithSupabase('transactions', transactions); }, [transactions, dataLoaded]);
   useEffect(() => { if (dataLoaded) syncWithSupabase('categories', categories); }, [categories, dataLoaded]);
   useEffect(() => { if (dataLoaded) syncWithSupabase('cards', cards); }, [cards, dataLoaded]);
