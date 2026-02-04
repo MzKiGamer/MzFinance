@@ -16,6 +16,18 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Helper to map snake_case profile to camelCase User
+const mapProfile = (p: any): User => ({
+  id: p.id,
+  name: p.name,
+  username: p.username,
+  email: p.email,
+  role: p.role,
+  passwordHash: '', // Not returned/needed in frontend
+  responsibleId: p.responsible_id,
+  permissions: p.permissions
+});
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -33,7 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
       
       if (error) throw error;
-      return data as User;
+      return mapProfile(data);
     } catch (err) {
       console.error("Erro ao buscar perfil:", err);
       return null;
@@ -115,7 +127,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!supabase) throw new Error("Banco de dados não configurado.");
 
     try {
-      // Gera username a partir do email (antes do @)
       const autoUsername = userData.email?.split('@')[0] || `user_${Math.random().toString(36).substring(7)}`;
 
       const auth = (supabase.auth as any);

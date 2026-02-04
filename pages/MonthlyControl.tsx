@@ -78,7 +78,8 @@ const MonthlyControl: React.FC = () => {
 
   const handleTogglePaid = (tx: Transaction) => {
     const newPaidStatus = !tx.paid;
-    const today = new Date().toLocaleDateString(language === 'pt' ? 'pt-BR' : 'en-US');
+    // Format must be YYYY-MM-DD for database
+    const today = new Date().toISOString().split('T')[0];
     setTransactions(prev => prev.map(t => t.id === tx.id ? { 
       ...t, paid: newPaidStatus, paymentDate: newPaidStatus ? today : undefined 
     } : t));
@@ -112,6 +113,7 @@ const MonthlyControl: React.FC = () => {
   const handleSaveTransaction = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    const isPaid = fd.get('paid') === 'on';
     const nt: Transaction = {
       id: editingTransaction ? editingTransaction.id : crypto.randomUUID(),
       monthCode: currentMonthCode,
@@ -124,8 +126,8 @@ const MonthlyControl: React.FC = () => {
       cardId: fd.get('cardId') as string || undefined,
       goalId: fd.get('goalId') as string || undefined,
       investmentId: fd.get('investmentId') as string || undefined,
-      paid: fd.get('paid') === 'on',
-      paymentDate: (fd.get('paid') === 'on') ? (editingTransaction?.paymentDate || new Date().toLocaleDateString(language === 'pt' ? 'pt-BR' : 'en-US')) : undefined,
+      paid: isPaid,
+      paymentDate: isPaid ? (editingTransaction?.paymentDate || new Date().toISOString().split('T')[0]) : undefined,
       notes: fd.get('notes') as string || '',
     };
     if (editingTransaction) setTransactions(prev => prev.map(t => t.id === nt.id ? nt : t));
@@ -184,7 +186,7 @@ const MonthlyControl: React.FC = () => {
       type: fd.get('type') as any,
       broker: fd.get('broker') as string,
       value: Number(fd.get('value')),
-      updatedAt: new Date().toLocaleDateString(),
+      updatedAt: new Date().toISOString().split('T')[0],
       category: fd.get('category') as string
     };
     setInvestments(prev => [...prev, newInv]);

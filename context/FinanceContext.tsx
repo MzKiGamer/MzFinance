@@ -31,7 +31,7 @@ interface FinanceContextType {
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
-// Helper functions for naming convention mapping
+// Robust mapping helpers
 const snakeToCamel = (str: string) => str.replace(/(_\w)/g, m => m[1].toUpperCase());
 const camelToSnake = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
 
@@ -50,6 +50,8 @@ const mapToDB = (data: any[], userId: string) => {
   return data.map(item => {
     const newItem: any = {};
     for (let key in item) {
+      // Don't map fields that might be UI-only if necessary, 
+      // but camelToSnake covers the standard ones.
       newItem[camelToSnake(key)] = item[key];
     }
     newItem.user_id = userId;
@@ -92,16 +94,18 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     
     setIsLoading(true);
+    console.log("Mz Finance: Carregando dados para o usuário", currentUser.id);
+    
     try {
       const [
-        { data: txs }, 
-        { data: cats }, 
-        { data: crds }, 
-        { data: gls }, 
-        { data: fixed }, 
-        { data: asts }, 
-        { data: invs }, 
-        { data: mconfs }
+        { data: txs, error: txError }, 
+        { data: cats, error: catError }, 
+        { data: crds, error: crdError }, 
+        { data: gls, error: glError }, 
+        { data: fixed, error: fixError }, 
+        { data: asts, error: astError }, 
+        { data: invs, error: invError }, 
+        { data: mconfs, error: mconfError }
       ] = await Promise.all([
         supabase.from('transactions').select('*').eq('user_id', currentUser.id),
         supabase.from('categories').select('*').eq('user_id', currentUser.id),
@@ -113,6 +117,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         supabase.from('month_configs').select('*').eq('user_id', currentUser.id),
       ]);
 
+      if (txError) console.error("Erro transações:", txError);
+      if (catError) console.error("Erro categorias:", catError);
+      
       if (txs) setTransactions(mapToJS(txs));
       if (cats && cats.length > 0) setCategories(mapToJS(cats));
       if (crds) setCards(mapToJS(crds));
@@ -122,9 +129,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (invs) setInvestments(mapToJS(invs));
       if (mconfs) setMonthConfigs(mapToJS(mconfs));
       
+      console.log("Mz Finance: Dados carregados com sucesso.");
       setDataLoaded(true);
     } catch (err) {
-      console.error("Erro ao carregar dados:", err);
+      console.error("Erro crítico ao carregar dados:", err);
       setDataLoaded(true);
     } finally {
       setIsLoading(false);
@@ -144,19 +152,24 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     
     setIsSyncing(true);
     try {
-      if (data.length > 0) {
-        const dataToSync = mapToDB(data, currentUser.id);
+      // We allow empty arrays to sync (to handle deletions)
+      // If table is profiles, we handle it elsewhere, but here we cover the 8 main data tables
+      const dataToSync = mapToDB(data, currentUser.id);
+      
+      // We use upsert. If array is empty, we don't upsert but ideally we'd need to handle full sync logic.
+      // For now, only upsert if there is data.
+      if (dataToSync.length > 0) {
         const { error } = await supabase.from(table).upsert(dataToSync, { onConflict: 'id' });
         if (error) throw error;
       }
     } catch (err) {
-      console.error(`Erro ao sincronizar ${table}:`, err);
+      console.error(`Mz Finance: Falha ao sincronizar tabela ${table}:`, err);
     } finally {
       setIsSyncing(false);
     }
   };
 
-  // Sync effects - only trigger after dataLoaded is true to prevent overwriting with initial empty states
+  // Sync effects
   useEffect(() => { if (dataLoaded) syncWithSupabase('transactions', transactions); }, [transactions, dataLoaded]);
   useEffect(() => { if (dataLoaded) syncWithSupabase('categories', categories); }, [categories, dataLoaded]);
   useEffect(() => { if (dataLoaded) syncWithSupabase('cards', cards); }, [cards, dataLoaded]);
