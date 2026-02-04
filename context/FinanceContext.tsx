@@ -19,6 +19,7 @@ interface FinanceContextType {
   setFixedEntries: React.Dispatch<React.SetStateAction<FixedEntry[]>>;
   transactions: Transaction[];
   setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>;
+  deleteTransaction: (id: string) => Promise<void>;
   assets: Asset[];
   setAssets: React.Dispatch<React.SetStateAction<Asset[]>>;
   investments: Investment[];
@@ -68,7 +69,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isSyncing, setIsSyncing] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   
-  // Ref para controlar se o primeiro carregamento foi concluído
   const isInitialLoadDone = useRef(false);
 
   // Estados
@@ -101,8 +101,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     
     setIsLoading(true);
-    console.debug("Mz Finance: Carregando dados da nuvem...");
-    
     try {
       const fetchTable = async (table: string) => {
         const { data, error } = await supabase.from(table).select('*').eq('user_id', currentUser.id);
@@ -121,21 +119,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         fetchTable('month_configs'),
       ]);
 
-      if (txs.length) setTransactions(mapToJS(txs));
-      if (cats.length) setCategories(mapToJS(cats));
-      if (crds.length) setCards(mapToJS(crds));
-      if (gls.length) setGoals(mapToJS(gls));
-      if (fixed.length) setFixedEntries(mapToJS(fixed));
-      if (asts.length) setAssets(mapToJS(asts));
-      if (invs.length) setInvestments(mapToJS(invs));
-      if (mconfs.length) setMonthConfigs(mapToJS(mconfs));
+      setTransactions(mapToJS(txs));
+      setCategories(cats.length ? mapToJS(cats) : DEFAULT_CATEGORIES);
+      setCards(mapToJS(crds));
+      setGoals(mapToJS(gls));
+      setFixedEntries(mapToJS(fixed));
+      setAssets(mapToJS(asts));
+      setInvestments(mapToJS(invs));
+      setMonthConfigs(mapToJS(mconfs));
       
-      console.debug("Mz Finance: Dados sincronizados com sucesso.");
       isInitialLoadDone.current = true;
       setDataLoaded(true);
     } catch (err) {
-      console.error("Mz Finance: Erro ao carregar dados remotos:", err);
-      // Mesmo em erro, permitimos uso local
+      console.error("Mz Finance: Erro ao carregar dados:", err);
       isInitialLoadDone.current = true;
       setDataLoaded(true);
     } finally {
@@ -152,13 +148,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [currentUser, fetchData, clearLocalStates]);
 
   const syncWithSupabase = async (table: string, data: any[]) => {
-    // Só sincroniza se já terminou de carregar os dados iniciais
     if (!currentUser || !isInitialLoadDone.current || !supabase) return;
     
     setIsSyncing(true);
     try {
       const dataToSync = mapToDB(data, currentUser.id);
-      
       if (dataToSync.length > 0) {
         const { error } = await supabase.from(table).upsert(dataToSync, { onConflict: 'id' });
         if (error) throw error;
@@ -170,7 +164,23 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Sincronizadores individuais
+  const deleteTransaction = async (id: string) => {
+    // 1. Atualiza localmente imediatamente (Pessimistic UI para evitar "pulo")
+    setTransactions(prev => prev.filter(t => t.id !== id));
+
+    // 2. Remove do banco de dados
+    if (currentUser && supabase) {
+      try {
+        const { error } = await supabase.from('transactions').delete().eq('id', id);
+        if (error) throw error;
+      } catch (err) {
+        console.error("Erro ao deletar transação:", err);
+        // Opcional: Re-adicionar o item se falhar, mas aqui focamos em consistência
+      }
+    }
+  };
+
+  // Sincronizadores automáticos para Updates e Adds
   useEffect(() => { syncWithSupabase('transactions', transactions); }, [transactions]);
   useEffect(() => { syncWithSupabase('categories', categories); }, [categories]);
   useEffect(() => { syncWithSupabase('cards', cards); }, [cards]);
@@ -185,7 +195,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const idx = prev.findIndex(c => c.monthCode === config.monthCode);
       if (idx >= 0) {
         const copy = [...prev];
-        // Preserva o ID original se existir
         copy[idx] = { ...prev[idx], ...config };
         return copy;
       }
@@ -200,6 +209,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       goals, setGoals,
       fixedEntries, setFixedEntries,
       transactions, setTransactions,
+      deleteTransaction,
       assets, setAssets,
       investments, setInvestments,
       monthConfigs, updateMonthConfig,

@@ -18,6 +18,7 @@ const CARD_COLORS = ['#222222', '#FF385C', '#6366f1', '#10b981', '#f59e0b', '#8b
 const MonthlyControl: React.FC = () => {
   const { 
     transactions, setTransactions, 
+    deleteTransaction,
     categories, setCategories,
     cards, setCards,
     goals, setGoals,
@@ -51,15 +52,23 @@ const MonthlyControl: React.FC = () => {
     return { res, exp, balance: res - exp };
   }, [monthTransactions]);
 
-  const config = useMemo(() => 
-    monthConfigs.find(c => c.monthCode === currentMonthCode) || {
-        monthCode: currentMonthCode, 
-        income: stats.res, 
-        needsPercent: 50, 
-        desiresPercent: 30, 
-        savingsPercent: 20
+  const config = useMemo(() => {
+    const found = monthConfigs.find(c => c.monthCode === currentMonthCode);
+    if (found) return found;
+    return {
+      monthCode: currentMonthCode, 
+      income: stats.res, 
+      needsPercent: 50, 
+      desiresPercent: 30, 
+      savingsPercent: 20
+    };
+  }, [monthConfigs, currentMonthCode, stats.res]);
+
+  useEffect(() => {
+    if (config.income !== stats.res) {
+      updateMonthConfig({ ...config, income: stats.res });
     }
-  , [monthConfigs, currentMonthCode, stats.res]);
+  }, [stats.res, config.income, updateMonthConfig, config]);
 
   const formatCurrency = (val: number) => 
     new Intl.NumberFormat(language === 'pt' ? 'pt-BR' : 'en-US', { 
@@ -73,12 +82,12 @@ const MonthlyControl: React.FC = () => {
                    (key === 'savingsPercent' ? 0 : config.savingsPercent);
     let newVal = Math.max(0, val);
     if (others + newVal > 100) newVal = 100 - others;
-    updateMonthConfig({ ...config, [key]: newVal });
+    
+    updateMonthConfig({ ...config, [key]: newVal, income: stats.res });
   };
 
   const handleTogglePaid = (tx: Transaction) => {
     const newPaidStatus = !tx.paid;
-    // Format must be YYYY-MM-DD for database
     const today = new Date().toISOString().split('T')[0];
     setTransactions(prev => prev.map(t => t.id === tx.id ? { 
       ...t, paid: newPaidStatus, paymentDate: newPaidStatus ? today : undefined 
@@ -391,7 +400,7 @@ const MonthlyControl: React.FC = () => {
                       <Pencil size={20} />
                     </button>
                     <button 
-                      onClick={() => setTransactions(prev => prev.filter(t => t.id !== tx.id))} 
+                      onClick={() => deleteTransaction(tx.id)} 
                       className="p-2 text-gray-300 hover:text-red-500 transition-all rounded-lg hover:bg-gray-50"
                     >
                       <Trash2 size={20} />
