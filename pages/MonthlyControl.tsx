@@ -255,7 +255,7 @@ const MonthlyControl: React.FC = () => {
               <div className="flex flex-col gap-0.5 min-w-[140px]">
                 <span className="text-[7px] font-black uppercase text-gray-400 tracking-[0.1em]">RENDA TOTAL</span>
                 <div className="flex items-center gap-1.5">
-                  <Landmark size={14} className="text-green-600" />
+                  < Landmark size={14} className="text-green-600" />
                   <span className="text-xl font-black text-gray-800 tracking-tighter">{formatCurrency(stats.res)}</span>
                 </div>
                 <div className={`mt-0.5 inline-block w-fit px-1.5 py-0.5 rounded-full border text-[6px] font-black uppercase tracking-widest ${totalAllocated === 100 ? 'bg-green-100 border-green-200 text-green-700' : 'bg-amber-100 border-amber-200 text-amber-700'}`}>
@@ -472,7 +472,7 @@ const MonthlyControl: React.FC = () => {
                     </div>
                   </div>
                 )}
-                {modalType === 'Receita' && (
+                {modalType === 'Despesa' && (
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('goals')}</label>
                     <div className="flex gap-2">
