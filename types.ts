@@ -99,6 +99,7 @@ export interface Investment {
 }
 
 export interface MonthConfig {
+  id?: string; // Adicionado para persistência
   monthCode: string;
   income: number;
   needsPercent: number;

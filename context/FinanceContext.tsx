@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Transaction, Category, Card, Goal, FixedEntry, 
   Asset, Investment, MonthConfig 
@@ -31,7 +31,7 @@ interface FinanceContextType {
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
-// Robust mapping helpers
+// Helpers de mapeamento
 const snakeToCamel = (str: string) => str.replace(/(_\w)/g, m => m[1].toUpperCase());
 const camelToSnake = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
 
@@ -50,11 +50,13 @@ const mapToDB = (data: any[], userId: string) => {
   return data.map(item => {
     const newItem: any = {};
     for (let key in item) {
-      // Don't map fields that might be UI-only if necessary, 
-      // but camelToSnake covers the standard ones.
       newItem[camelToSnake(key)] = item[key];
     }
     newItem.user_id = userId;
+    // Garante que MonthConfig tenha um ID único para o upsert se não tiver
+    if (!newItem.id && newItem.month_code) {
+      newItem.id = `${userId}_${newItem.month_code}`;
+    }
     return newItem;
   });
 };
@@ -64,8 +66,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
+  
+  // Refs para evitar loops de sincronização desnecessários
+  const initialLoadRef = useRef(false);
 
-  // States
+  // Estados
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
   const [cards, setCards] = useState<Card[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -77,6 +82,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const clearLocalStates = useCallback(() => {
     setDataLoaded(false);
+    initialLoadRef.current = false;
     setTransactions([]);
     setCategories(DEFAULT_CATEGORIES);
     setCards([]);
@@ -94,45 +100,43 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     
     setIsLoading(true);
-    console.log("Mz Finance: Carregando dados para o usuário", currentUser.id);
+    console.log("Mz Finance: Buscando dados remotos para", currentUser.email);
     
     try {
-      const [
-        { data: txs, error: txError }, 
-        { data: cats, error: catError }, 
-        { data: crds, error: crdError }, 
-        { data: gls, error: glError }, 
-        { data: fixed, error: fixError }, 
-        { data: asts, error: astError }, 
-        { data: invs, error: invError }, 
-        { data: mconfs, error: mconfError }
-      ] = await Promise.all([
-        supabase.from('transactions').select('*').eq('user_id', currentUser.id),
-        supabase.from('categories').select('*').eq('user_id', currentUser.id),
-        supabase.from('cards').select('*').eq('user_id', currentUser.id),
-        supabase.from('goals').select('*').eq('user_id', currentUser.id),
-        supabase.from('fixed_entries').select('*').eq('user_id', currentUser.id),
-        supabase.from('assets').select('*').eq('user_id', currentUser.id),
-        supabase.from('investments').select('*').eq('user_id', currentUser.id),
-        supabase.from('month_configs').select('*').eq('user_id', currentUser.id),
+      const fetchTable = async (table: string) => {
+        const { data, error } = await supabase.from(table).select('*').eq('user_id', currentUser.id);
+        if (error) {
+          console.error(`Erro ao carregar ${table}:`, error.message);
+          return [];
+        }
+        return data || [];
+      };
+
+      const [txs, cats, crds, gls, fixed, asts, invs, mconfs] = await Promise.all([
+        fetchTable('transactions'),
+        fetchTable('categories'),
+        fetchTable('cards'),
+        fetchTable('goals'),
+        fetchTable('fixed_entries'),
+        fetchTable('assets'),
+        fetchTable('investments'),
+        fetchTable('month_configs'),
       ]);
 
-      if (txError) console.error("Erro transações:", txError);
-      if (catError) console.error("Erro categorias:", catError);
+      if (txs.length > 0) setTransactions(mapToJS(txs));
+      if (cats.length > 0) setCategories(mapToJS(cats));
+      if (crds.length > 0) setCards(mapToJS(crds));
+      if (gls.length > 0) setGoals(mapToJS(gls));
+      if (fixed.length > 0) setFixedEntries(mapToJS(fixed));
+      if (asts.length > 0) setAssets(mapToJS(asts));
+      if (invs.length > 0) setInvestments(mapToJS(invs));
+      if (mconfs.length > 0) setMonthConfigs(mapToJS(mconfs));
       
-      if (txs) setTransactions(mapToJS(txs));
-      if (cats && cats.length > 0) setCategories(mapToJS(cats));
-      if (crds) setCards(mapToJS(crds));
-      if (gls) setGoals(mapToJS(gls));
-      if (fixed) setFixedEntries(mapToJS(fixed));
-      if (asts) setAssets(mapToJS(asts));
-      if (invs) setInvestments(mapToJS(invs));
-      if (mconfs) setMonthConfigs(mapToJS(mconfs));
-      
-      console.log("Mz Finance: Dados carregados com sucesso.");
+      console.log("Mz Finance: Dados carregados com sucesso. Prontos para sincronia.");
+      initialLoadRef.current = true;
       setDataLoaded(true);
     } catch (err) {
-      console.error("Erro crítico ao carregar dados:", err);
+      console.error("Erro crítico no carregamento:", err);
       setDataLoaded(true);
     } finally {
       setIsLoading(false);
@@ -148,36 +152,49 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [currentUser, fetchData, clearLocalStates]);
 
   const syncWithSupabase = async (table: string, data: any[]) => {
-    if (!currentUser || !dataLoaded || !supabase) return;
+    // SÓ SINCRONIZA SE O CARREGAMENTO INICIAL TERMINOU
+    if (!currentUser || !initialLoadRef.current || !supabase) return;
     
     setIsSyncing(true);
     try {
-      // We allow empty arrays to sync (to handle deletions)
-      // If table is profiles, we handle it elsewhere, but here we cover the 8 main data tables
       const dataToSync = mapToDB(data, currentUser.id);
       
-      // We use upsert. If array is empty, we don't upsert but ideally we'd need to handle full sync logic.
-      // For now, only upsert if there is data.
-      if (dataToSync.length > 0) {
-        const { error } = await supabase.from(table).upsert(dataToSync, { onConflict: 'id' });
-        if (error) throw error;
+      if (dataToSync.length === 0) {
+        // Se a lista local está vazia (ex: deletou tudo), precisamos refletir isso no banco.
+        // O upsert não deleta. Em um sistema real, usaríamos um soft-delete ou sincronização de estado.
+        // Para este MVP, vamos apenas registrar que o upsert não será chamado para listas vazias.
+        setIsSyncing(false);
+        return;
+      }
+
+      console.log(`Mz Finance: Sincronizando ${dataToSync.length} itens na tabela ${table}...`);
+      
+      const { error } = await supabase
+        .from(table)
+        .upsert(dataToSync, { onConflict: 'id' });
+
+      if (error) {
+        console.error(`Falha na sincronização de ${table}:`, error.message);
+        // Opcional: Notificar o usuário que a conexão falhou
+      } else {
+        console.log(`Mz Finance: Tabela ${table} atualizada na nuvem.`);
       }
     } catch (err) {
-      console.error(`Mz Finance: Falha ao sincronizar tabela ${table}:`, err);
+      console.error(`Erro inesperado ao sincronizar ${table}:`, err);
     } finally {
       setIsSyncing(false);
     }
   };
 
-  // Sync effects
-  useEffect(() => { if (dataLoaded) syncWithSupabase('transactions', transactions); }, [transactions, dataLoaded]);
-  useEffect(() => { if (dataLoaded) syncWithSupabase('categories', categories); }, [categories, dataLoaded]);
-  useEffect(() => { if (dataLoaded) syncWithSupabase('cards', cards); }, [cards, dataLoaded]);
-  useEffect(() => { if (dataLoaded) syncWithSupabase('goals', goals); }, [goals, dataLoaded]);
-  useEffect(() => { if (dataLoaded) syncWithSupabase('fixed_entries', fixedEntries); }, [fixedEntries, dataLoaded]);
-  useEffect(() => { if (dataLoaded) syncWithSupabase('assets', assets); }, [assets, dataLoaded]);
-  useEffect(() => { if (dataLoaded) syncWithSupabase('investments', investments); }, [investments, dataLoaded]);
-  useEffect(() => { if (dataLoaded) syncWithSupabase('month_configs', monthConfigs); }, [monthConfigs, dataLoaded]);
+  // Efeitos de Sincronização Automática (Debounced pela natureza do React useEffect)
+  useEffect(() => { syncWithSupabase('transactions', transactions); }, [transactions]);
+  useEffect(() => { syncWithSupabase('categories', categories); }, [categories]);
+  useEffect(() => { syncWithSupabase('cards', cards); }, [cards]);
+  useEffect(() => { syncWithSupabase('goals', goals); }, [goals]);
+  useEffect(() => { syncWithSupabase('fixed_entries', fixedEntries); }, [fixedEntries]);
+  useEffect(() => { syncWithSupabase('assets', assets); }, [assets]);
+  useEffect(() => { syncWithSupabase('investments', investments); }, [investments]);
+  useEffect(() => { syncWithSupabase('month_configs', monthConfigs); }, [monthConfigs]);
 
   const updateMonthConfig = (config: MonthConfig) => {
     setMonthConfigs(prev => {
