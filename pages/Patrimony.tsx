@@ -74,60 +74,88 @@ const Patrimony: React.FC = () => {
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700 max-w-[1200px] mx-auto pb-24 md:pb-20 px-1">
       <div className="text-center py-4 md:py-8">
-        <span className="text-[8px] font-black uppercase text-gray-400 tracking-[0.2em] block mb-1">{t('consolidatedPatrimony')}</span>
-        <h1 className={`text-2xl md:text-3xl font-black tracking-tighter ${totalPatrimony >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+        <span className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em] block mb-1">{t('consolidatedPatrimony')}</span>
+        <h1 className={`text-4xl md:text-5xl font-black tracking-tighter ${totalPatrimony >= 0 ? 'text-green-600' : 'text-red-600'}`}>
           {formatCurrency(totalPatrimony)}
         </h1>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+        {/* Seção de Reservas */}
         <div className="space-y-4">
           <div className="flex justify-between items-center px-1">
-            <h2 className="text-sm font-black uppercase tracking-tight flex items-center gap-2"><Building2 size={16} className="text-gray-400" /> {t('reserves')}</h2>
-            <button onClick={() => { setEditingAsset(null); setIsAddingAsset(true); }} className="bg-black text-white text-[8px] font-black uppercase px-3 py-1.5 rounded-lg flex items-center gap-1.5"><Plus size={12} /> {t('newAsset')}</button>
+            <h2 className="text-[22px] font-black uppercase tracking-tight flex items-center gap-2">
+              <Building2 size={24} className="text-gray-400" /> {t('reserves')}
+            </h2>
+            <button onClick={() => { setEditingAsset(null); setIsAddingAsset(true); }} className="bg-black text-white text-[10px] font-black uppercase px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95 transition-all">
+              <Plus size={14} /> {t('newAsset')}
+            </button>
           </div>
           <div className="space-y-3">
             {assets.map(asset => (
-              <div key={asset.id} className="airbnb-card p-3 md:p-4 flex justify-between items-center group">
+              <div key={asset.id} className="airbnb-card p-4 md:p-6 flex justify-between items-center group">
                 <div className="min-w-0 pr-4">
-                  <h4 className="font-black text-sm text-gray-800 truncate leading-tight">{asset.description}</h4>
-                  <p className="text-[8px] text-gray-400 font-bold uppercase tracking-wider truncate">
+                  <h4 className="font-black text-[22px] text-gray-800 truncate leading-tight tracking-tighter">{asset.description}</h4>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider truncate mt-1">
                     {asset.bank} • {t('liquidity')}: {asset.liquidity}
                   </p>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <div className="text-right mr-1"><div className={`font-black text-sm ${asset.value >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(asset.value)}</div></div>
-                  <button onClick={() => { setEditingAsset(asset); setIsAddingAsset(true); }} className="text-gray-200 hover:text-black p-1.5"><Pencil size={14} /></button>
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="text-right mr-1">
+                    <div className={`font-black text-[22px] tracking-tighter ${asset.value >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatCurrency(asset.value)}
+                    </div>
+                  </div>
+                  <button onClick={() => { setEditingAsset(asset); setIsAddingAsset(true); }} className="text-gray-200 hover:text-black p-2 transition-colors">
+                    <Pencil size={18} />
+                  </button>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
+        {/* Seção de Investimentos */}
         <div className="space-y-4">
           <div className="flex justify-between items-center px-1">
-            <h2 className="text-sm font-black uppercase tracking-tight flex items-center gap-2"><TrendingUp size={16} className="text-gray-400" /> {t('investments')}</h2>
-            <button onClick={() => { setEditingInvestment(null); setIsAddingInvestment(true); }} className="bg-black text-white text-[8px] font-black uppercase px-3 py-1.5 rounded-lg flex items-center gap-1.5"><Plus size={12} /> {t('newInvestment')}</button>
+            <h2 className="text-[22px] font-black uppercase tracking-tight flex items-center gap-2">
+              <TrendingUp size={24} className="text-gray-400" /> {t('investments')}
+            </h2>
+            <button onClick={() => { setEditingInvestment(null); setIsAddingInvestment(true); }} className="bg-black text-white text-[10px] font-black uppercase px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95 transition-all">
+              <Plus size={14} /> {t('newInvestment')}
+            </button>
           </div>
           <div className="airbnb-card overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left min-w-[300px]">
                 <thead>
-                  <tr className="bg-gray-50 text-[8px] font-black text-gray-400 uppercase border-b tracking-widest"><th className="px-4 py-3">{t('description')}</th><th className="px-4 py-3 text-right">{t('value')}</th><th className="px-4 py-3"></th></tr>
+                  <tr className="bg-gray-50 text-[10px] font-black text-gray-400 uppercase border-b tracking-widest">
+                    <th className="px-6 py-4">{t('description')}</th>
+                    <th className="px-6 py-4 text-right">{t('value')}</th>
+                    <th className="px-6 py-4"></th>
+                  </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {investments.map(inv => (
                     <tr key={inv.id} className="group hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-4">
+                      <td className="px-6 py-5">
                         <div className="flex flex-col min-w-0">
-                          <span className="font-black text-xs text-gray-800 truncate">{inv.category || 'Ativo'}</span>
-                          <span className="text-[8px] text-gray-400 font-black uppercase tracking-tight">{inv.type} • {inv.broker}</span>
+                          <span className="font-black text-[18px] text-gray-800 truncate tracking-tight">{inv.category || 'Ativo'}</span>
+                          <span className="text-[10px] text-gray-400 font-black uppercase tracking-tight mt-0.5">{inv.type} • {inv.broker}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-right font-black text-xs text-green-600">{formatCurrency(inv.value)}</td>
-                      <td className="px-4 py-4 text-right whitespace-nowrap">
-                        <button onClick={() => { setEditingInvestment(inv); setIsAddingInvestment(true); }} className="text-gray-200 hover:text-black p-1"><Pencil size={14} /></button>
-                        <button onClick={() => setInvestments(prev => prev.filter(i => i.id !== inv.id))} className="text-gray-200 hover:text-red-500 p-1"><Trash2 size={14} /></button>
+                      <td className="px-6 py-5 text-right font-black text-[22px] text-green-600 tracking-tighter">
+                        {formatCurrency(inv.value)}
+                      </td>
+                      <td className="px-6 py-5 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => { setEditingInvestment(inv); setIsAddingInvestment(true); }} className="text-gray-200 hover:text-black p-2 transition-colors">
+                            <Pencil size={18} />
+                          </button>
+                          <button onClick={() => setInvestments(prev => prev.filter(i => i.id !== inv.id))} className="text-gray-200 hover:text-red-500 p-2 transition-colors">
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -138,6 +166,7 @@ const Patrimony: React.FC = () => {
         </div>
       </div>
 
+      {/* Modal Ativo */}
       {isAddingAsset && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-[24px] w-full max-w-sm p-6 md:p-8 animate-in zoom-in duration-300 shadow-2xl relative my-auto">
@@ -164,6 +193,7 @@ const Patrimony: React.FC = () => {
         </div>
       )}
 
+      {/* Modal Investimento */}
       {isAddingInvestment && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-[24px] w-full max-w-sm p-6 md:p-8 animate-in zoom-in duration-300 shadow-2xl relative my-auto">
