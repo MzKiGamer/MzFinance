@@ -11,19 +11,25 @@ import { useAuth } from './AuthContext';
 interface FinanceContextType {
   categories: Category[];
   setCategories: React.Dispatch<React.SetStateAction<Category[]>>;
+  deleteCategory: (id: string) => Promise<void>;
   cards: Card[];
   setCards: React.Dispatch<React.SetStateAction<Card[]>>;
+  deleteCard: (id: string) => Promise<void>;
   goals: Goal[];
   setGoals: React.Dispatch<React.SetStateAction<Goal[]>>;
+  deleteGoal: (id: string) => Promise<void>;
   fixedEntries: FixedEntry[];
   setFixedEntries: React.Dispatch<React.SetStateAction<FixedEntry[]>>;
+  deleteFixedEntry: (id: string) => Promise<void>;
   transactions: Transaction[];
   setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>;
   deleteTransaction: (id: string) => Promise<void>;
   assets: Asset[];
   setAssets: React.Dispatch<React.SetStateAction<Asset[]>>;
+  deleteAsset: (id: string) => Promise<void>;
   investments: Investment[];
   setInvestments: React.Dispatch<React.SetStateAction<Investment[]>>;
+  deleteInvestment: (id: string) => Promise<void>;
   monthConfigs: MonthConfig[];
   updateMonthConfig: (config: MonthConfig) => void;
   isLoading: boolean;
@@ -32,7 +38,6 @@ interface FinanceContextType {
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
-// Helpers de mapeamento robustos
 const snakeToCamel = (str: string) => str.replace(/(_\w)/g, m => m[1].toUpperCase());
 const camelToSnake = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
 
@@ -54,8 +59,6 @@ const mapToDB = (data: any[], userId: string) => {
       newItem[camelToSnake(key)] = item[key];
     }
     newItem.user_id = userId;
-    
-    // Para MonthConfigs, o ID é determinístico baseado no mês e usuário
     if (!newItem.id && newItem.month_code) {
       newItem.id = `mconf_${userId}_${newItem.month_code}`;
     }
@@ -68,10 +71,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
-  
   const isInitialLoadDone = useRef(false);
 
-  // Estados
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
   const [cards, setCards] = useState<Card[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -99,7 +100,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setDataLoaded(true);
       return;
     }
-    
     setIsLoading(true);
     try {
       const fetchTable = async (table: string) => {
@@ -107,7 +107,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (error) throw error;
         return data || [];
       };
-
       const [txs, cats, crds, gls, fixed, asts, invs, mconfs] = await Promise.all([
         fetchTable('transactions'),
         fetchTable('categories'),
@@ -118,7 +117,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         fetchTable('investments'),
         fetchTable('month_configs'),
       ]);
-
       setTransactions(mapToJS(txs));
       setCategories(cats.length ? mapToJS(cats) : DEFAULT_CATEGORIES);
       setCards(mapToJS(crds));
@@ -127,7 +125,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setAssets(mapToJS(asts));
       setInvestments(mapToJS(invs));
       setMonthConfigs(mapToJS(mconfs));
-      
       isInitialLoadDone.current = true;
       setDataLoaded(true);
     } catch (err) {
@@ -140,16 +137,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [currentUser]);
 
   useEffect(() => {
-    if (currentUser) {
-      fetchData();
-    } else {
-      clearLocalStates();
-    }
+    if (currentUser) fetchData();
+    else clearLocalStates();
   }, [currentUser, fetchData, clearLocalStates]);
 
   const syncWithSupabase = async (table: string, data: any[]) => {
     if (!currentUser || !isInitialLoadDone.current || !supabase) return;
-    
     setIsSyncing(true);
     try {
       const dataToSync = mapToDB(data, currentUser.id);
@@ -164,23 +157,26 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const deleteTransaction = async (id: string) => {
-    // 1. Atualiza localmente imediatamente (Pessimistic UI para evitar "pulo")
-    setTransactions(prev => prev.filter(t => t.id !== id));
-
-    // 2. Remove do banco de dados
+  const deleteItem = async (table: string, id: string, setter: React.Dispatch<React.SetStateAction<any[]>>) => {
+    setter(prev => prev.filter(item => item.id !== id));
     if (currentUser && supabase) {
       try {
-        const { error } = await supabase.from('transactions').delete().eq('id', id);
+        const { error } = await supabase.from(table).delete().eq('id', id);
         if (error) throw error;
       } catch (err) {
-        console.error("Erro ao deletar transação:", err);
-        // Opcional: Re-adicionar o item se falhar, mas aqui focamos em consistência
+        console.error(`Erro ao deletar de ${table}:`, err);
       }
     }
   };
 
-  // Sincronizadores automáticos para Updates e Adds
+  const deleteTransaction = (id: string) => deleteItem('transactions', id, setTransactions);
+  const deleteGoal = (id: string) => deleteItem('goals', id, setGoals);
+  const deleteCategory = (id: string) => deleteItem('categories', id, setCategories);
+  const deleteCard = (id: string) => deleteItem('cards', id, setCards);
+  const deleteFixedEntry = (id: string) => deleteItem('fixed_entries', id, setFixedEntries);
+  const deleteAsset = (id: string) => deleteItem('assets', id, setAssets);
+  const deleteInvestment = (id: string) => deleteItem('investments', id, setInvestments);
+
   useEffect(() => { syncWithSupabase('transactions', transactions); }, [transactions]);
   useEffect(() => { syncWithSupabase('categories', categories); }, [categories]);
   useEffect(() => { syncWithSupabase('cards', cards); }, [cards]);
@@ -204,17 +200,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   return (
     <FinanceContext.Provider value={{
-      categories, setCategories,
-      cards, setCards,
-      goals, setGoals,
-      fixedEntries, setFixedEntries,
-      transactions, setTransactions,
-      deleteTransaction,
-      assets, setAssets,
-      investments, setInvestments,
+      categories, setCategories, deleteCategory,
+      cards, setCards, deleteCard,
+      goals, setGoals, deleteGoal,
+      fixedEntries, setFixedEntries, deleteFixedEntry,
+      transactions, setTransactions, deleteTransaction,
+      assets, setAssets, deleteAsset,
+      investments, setInvestments, deleteInvestment,
       monthConfigs, updateMonthConfig,
-      isLoading,
-      isSyncing
+      isLoading, isSyncing
     }}>
       {children}
     </FinanceContext.Provider>

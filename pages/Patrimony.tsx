@@ -7,7 +7,7 @@ import { Plus, Trash2, Pencil, X, Building2, TrendingUp } from 'lucide-react';
 import { Asset, Investment } from '../types';
 
 const Patrimony: React.FC = () => {
-  const { assets, investments, setAssets, setInvestments } = useFinance();
+  const { assets, investments, setAssets, deleteAsset, setInvestments, deleteInvestment } = useFinance();
   const { t, language } = useLanguage();
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [isAddingAsset, setIsAddingAsset] = useState(false);
@@ -81,7 +81,6 @@ const Patrimony: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-        {/* Seção de Reservas */}
         <div className="space-y-4">
           <div className="flex justify-between items-center px-1">
             <h2 className="text-[22px] font-black uppercase tracking-tight flex items-center gap-2">
@@ -109,13 +108,15 @@ const Patrimony: React.FC = () => {
                   <button onClick={() => { setEditingAsset(asset); setIsAddingAsset(true); }} className="text-gray-200 hover:text-black p-2 transition-colors">
                     <Pencil size={18} />
                   </button>
+                  <button onClick={() => deleteAsset(asset.id)} className="text-gray-200 hover:text-red-500 p-2 transition-colors">
+                    <Trash2 size={18} />
+                  </button>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Seção de Investimentos */}
         <div className="space-y-4">
           <div className="flex justify-between items-center px-1">
             <h2 className="text-[22px] font-black uppercase tracking-tight flex items-center gap-2">
@@ -152,7 +153,7 @@ const Patrimony: React.FC = () => {
                           <button onClick={() => { setEditingInvestment(inv); setIsAddingInvestment(true); }} className="text-gray-200 hover:text-black p-2 transition-colors">
                             <Pencil size={18} />
                           </button>
-                          <button onClick={() => setInvestments(prev => prev.filter(i => i.id !== inv.id))} className="text-gray-200 hover:text-red-500 p-2 transition-colors">
+                          <button onClick={() => deleteInvestment(inv.id)} className="text-gray-200 hover:text-red-500 p-2 transition-colors">
                             <Trash2 size={18} />
                           </button>
                         </div>
@@ -166,7 +167,6 @@ const Patrimony: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal Ativo */}
       {isAddingAsset && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-[24px] w-full max-w-sm p-6 md:p-8 animate-in zoom-in duration-300 shadow-2xl relative my-auto">
@@ -193,7 +193,6 @@ const Patrimony: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Investimento */}
       {isAddingInvestment && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-[24px] w-full max-w-sm p-6 md:p-8 animate-in zoom-in duration-300 shadow-2xl relative my-auto">

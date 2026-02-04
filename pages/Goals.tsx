@@ -8,7 +8,7 @@ import { Goal } from '../types';
 const SYMBOLS = ['🎯', '✈️', '🚗', '🏠', '💍', '💻', '🎓', '🏥', '🏄', '🚀', '💰', '👶', '🚴', '🎸', '🕹️', '🎨', '🌴', '🛳️', '🏔️', '⛺', '🍔', '🥂', '🎁', '🎈'];
 
 const Goals: React.FC = () => {
-  const { goals, setGoals, transactions } = useFinance();
+  const { goals, setGoals, deleteGoal, transactions } = useFinance();
   const { t, language } = useLanguage();
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -16,10 +16,9 @@ const Goals: React.FC = () => {
 
   const goalsCalculated = useMemo(() => {
     return goals.map(g => {
-      // O saldo atual é o valor inicial + todas as transações vinculadas (tratadas como aportes)
       const transactionsTotal = transactions
         .filter(t => t.goalId === g.id && t.paid)
-        .reduce((sum, t) => sum + t.value, 0); // Soma o valor independente se é receita ou despesa
+        .reduce((sum, t) => sum + t.value, 0);
       
       const currentBalance = (g.savedValue || 0) + transactionsTotal;
       
@@ -47,7 +46,7 @@ const Goals: React.FC = () => {
       name: fd.get('name') as string,
       icon: selectedIcon,
       targetValue: Number(fd.get('targetValue')),
-      savedValue: Number(fd.get('savedValue')) // Valor inicial manual
+      savedValue: Number(fd.get('savedValue'))
     };
     if (editingGoal) {
       setGoals(prev => prev.map(g => g.id === ng.id ? ng : g));
@@ -90,7 +89,7 @@ const Goals: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-1">
                   <button onClick={() => handleEdit(goal)} className="p-1.5 text-gray-200 hover:text-black transition-colors"><Pencil size={14} /></button>
-                  <button onClick={() => setGoals(prev => prev.filter(g => g.id !== goal.id))} className="p-1.5 text-gray-200 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+                  <button onClick={() => deleteGoal(goal.id)} className="p-1.5 text-gray-200 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
                 </div>
               </div>
 

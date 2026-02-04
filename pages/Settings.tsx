@@ -11,7 +11,11 @@ const CARD_COLORS = ['#222222', '#FF385C', '#6366f1', '#10b981', '#f59e0b', '#8b
 const EMOJIS = ['🛒', '⚠️', '📱', '🐶', '👚', '💅', '🎁', '💊', '🤷', '🧠', '🚗', '🍽️', '🏖️', '🏠', '🧾', '📈', '🎓', '🤝', '💼', '💸', '🔁', '🚖', '🍕', '🍷', '🎮', '✈️', '🏋️', '📽️'];
 
 const Settings: React.FC = () => {
-  const { categories, setCategories, cards, setCards, fixedEntries, setFixedEntries } = useFinance();
+  const { 
+    categories, setCategories, deleteCategory,
+    cards, setCards, deleteCard,
+    fixedEntries, setFixedEntries, deleteFixedEntry
+  } = useFinance();
   const { currentUser } = useAuth();
   const { t, language } = useLanguage();
   const [activeTab, setActiveTab] = useState<'categories' | 'fixed' | 'cards'>('categories');
@@ -21,7 +25,6 @@ const Settings: React.FC = () => {
   const [editingCard, setEditingCard] = useState<Card | null>(null);
   const [editingFixed, setEditingFixed] = useState<FixedEntry | null>(null);
 
-  // Estados para controle dinâmico do formulário
   const [fixedType, setFixedType] = useState<TransactionType>('Despesa');
   const [fixedCategoryId, setFixedCategoryId] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('🤷');
@@ -202,7 +205,7 @@ const Settings: React.FC = () => {
               </div>
               <div className="flex items-center gap-1">
                 <button onClick={() => openCategoryModal(cat)} className="text-gray-200 hover:text-black transition-colors p-1.5"><Pencil size={16} /></button>
-                <button onClick={() => setCategories(prev => prev.filter(c => c.id !== cat.id))} className="text-gray-200 hover:text-red-500 transition-colors p-1.5"><Trash2 size={16} /></button>
+                <button onClick={() => deleteCategory(cat.id)} className="text-gray-200 hover:text-red-500 transition-colors p-1.5"><Trash2 size={16} /></button>
               </div>
             </div>
           ))}
@@ -226,7 +229,7 @@ const Settings: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-1 bg-white/10 backdrop-blur-md p-0.5 rounded-lg">
                   <button onClick={() => openCardModal(card)} className="text-white hover:text-black transition-all p-1.5 rounded-md hover:bg-white"><Pencil size={12} /></button>
-                  <button onClick={() => setCards(prev => prev.filter(c => c.id !== card.id))} className="text-white hover:text-red-500 transition-all p-1.5 rounded-md hover:bg-white"><Trash2 size={12} /></button>
+                  <button onClick={() => deleteCard(card.id)} className="text-white hover:text-red-500 transition-all p-1.5 rounded-md hover:bg-white"><Trash2 size={12} /></button>
                 </div>
               </div>
               <div className="relative z-10 flex flex-row items-end justify-between gap-4 mt-4 pt-3 border-t border-white/10">
@@ -255,7 +258,7 @@ const Settings: React.FC = () => {
               </div>
               <div className="flex items-center gap-1">
                 <button onClick={() => openFixedModal(fixed)} className="text-gray-200 hover:text-black transition-colors p-1.5"><Pencil size={16} /></button>
-                <button onClick={() => setFixedEntries(prev => prev.filter(f => f.id !== fixed.id))} className="text-gray-200 hover:text-red-500 transition-colors p-1.5"><Trash2 size={16} /></button>
+                <button onClick={() => deleteFixedEntry(fixed.id)} className="text-gray-200 hover:text-red-500 transition-colors p-1.5"><Trash2 size={16} /></button>
               </div>
             </div>
           ))}
