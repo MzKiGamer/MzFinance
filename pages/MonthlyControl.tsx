@@ -357,20 +357,20 @@ const MonthlyControl: React.FC = () => {
                 </div>
 
                 <div className="md:col-span-5 flex flex-wrap items-center justify-center gap-2">
-                  <div className="flex items-center gap-1 text-[8px] font-black text-green-600 bg-green-50/60 px-2 py-0.5 rounded-full border border-green-100">
-                    <CalendarIcon size={10} className="shrink-0" />
+                  <div className="flex items-center gap-1 text-sm font-black text-green-600 bg-green-50/60 px-3 py-1 rounded-full border border-green-100">
+                    <CalendarIcon size={14} className="shrink-0" />
                     <span>{tx.paymentDate || `Dia ${tx.day}`}</span>
                   </div>
 
                   {category && (
-                    <div className="flex items-center gap-1.5 text-[8px] font-black uppercase text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100">
-                      <TagIcon size={10} className="text-gray-400 shrink-0" />
+                    <div className="flex items-center gap-1.5 text-sm font-black uppercase text-gray-500 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
+                      <TagIcon size={14} className="text-gray-400 shrink-0" />
                       <span className="flex items-center gap-1">{category.icon} {category.name}</span>
                     </div>
                   )}
 
                   {goal && (
-                    <div className="flex items-center gap-1 text-[7px] font-black uppercase text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                    <div className="flex items-center gap-1 text-sm font-black uppercase text-blue-500 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
                       <span>{goal.icon} {goal.name}</span>
                     </div>
                   )}
