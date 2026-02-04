@@ -246,82 +246,91 @@ const MonthlyControl: React.FC = () => {
         </div>
       </div>
 
-      {/* Planning Section */}
-      <div className="space-y-2">
-        <h2 className="text-sm font-black tracking-tight ml-1">{t('planner')}</h2>
+      {/* Planning Section - Refined Slim Grade */}
+      <div className="space-y-1.5">
+        <h2 className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">{t('planner')}</h2>
         <div className="airbnb-card overflow-hidden">
-          <div className="p-4">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-center">
-              {/* Renda Acumulada */}
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[8px] font-black uppercase text-gray-400 tracking-[0.1em]">RENDA ACUMULADA (TOTAL)</span>
-                <div className="flex items-center gap-2">
-                  < Landmark size={16} className="text-green-600" />
-                  <span className="text-lg font-black text-gray-800 tracking-tighter">{formatCurrency(stats.res)}</span>
+          <div className="p-3">
+            <div className="flex flex-col lg:flex-row items-center gap-6">
+              
+              {/* Renda Acumulada - Left Fixed */}
+              <div className="flex flex-col gap-0.5 min-w-[140px]">
+                <span className="text-[7px] font-black uppercase text-gray-400 tracking-[0.1em]">RENDA TOTAL</span>
+                <div className="flex items-center gap-1.5">
+                  <Landmark size={14} className="text-green-600" />
+                  <span className="text-base font-black text-gray-800 tracking-tighter">{formatCurrency(stats.res)}</span>
                 </div>
-                <div className={`mt-1 inline-block w-fit px-2 py-0.5 rounded-full border text-[7px] font-black uppercase tracking-widest ${totalAllocated === 100 ? 'bg-green-100 border-green-200 text-green-700' : 'bg-amber-100 border-amber-200 text-amber-700'}`}>
-                  ALOCADO: {totalAllocated}%
-                </div>
-              </div>
-
-              {/* Necessidades */}
-              <div className="space-y-1.5">
-                <label className="text-[8px] font-black uppercase text-gray-400 block tracking-widest">{t('needs').toUpperCase()} (%)</label>
-                <div className="flex flex-col gap-1">
-                  <div className="bg-white border border-[#F0F0F0] rounded-lg px-2.5 py-1 font-black text-green-600 text-[10px] shadow-sm truncate flex items-center min-h-[30px]">
-                    {formatCurrency(stats.res * (config.needsPercent / 100))}
-                  </div>
-                  <div className="bg-[#F9F9F9] border border-[#F0F0F0] rounded-lg px-2.5 py-1 flex items-center justify-between shadow-sm focus-within:ring-1 focus-within:ring-[#FF385C]/10 transition-all min-h-[30px]">
-                    <input 
-                      type="number" 
-                      min="0" max="100"
-                      value={config.needsPercent} 
-                      onChange={(e) => handleUpdateConfig('needsPercent', Number(e.target.value))}
-                      className="bg-transparent border-none p-0 text-[10px] font-black w-full text-center focus:ring-0"
-                    />
-                    <span className="text-gray-300 font-black text-[10px] ml-0.5">%</span>
-                  </div>
+                <div className={`mt-0.5 inline-block w-fit px-1.5 py-0.5 rounded-full border text-[6px] font-black uppercase tracking-widest ${totalAllocated === 100 ? 'bg-green-100 border-green-200 text-green-700' : 'bg-amber-100 border-amber-200 text-amber-700'}`}>
+                  {totalAllocated}% ALOCADO
                 </div>
               </div>
 
-              {/* Poupança */}
-              <div className="space-y-1.5">
-                <label className="text-[8px] font-black uppercase text-gray-400 block tracking-widest">{t('savings').toUpperCase()} (%)</label>
-                <div className="flex flex-col gap-1">
-                  <div className="bg-white border border-[#F0F0F0] rounded-lg px-2.5 py-1 font-black text-green-600 text-[10px] shadow-sm truncate flex items-center min-h-[30px]">
-                    {formatCurrency(stats.res * (config.savingsPercent / 100))}
-                  </div>
-                  <div className="bg-[#F9F9F9] border border-[#F0F0F0] rounded-lg px-2.5 py-1 flex items-center justify-between shadow-sm focus-within:ring-1 focus-within:ring-[#FF385C]/10 transition-all min-h-[30px]">
-                    <input 
-                      type="number" 
-                      min="0" max="100"
-                      value={config.savingsPercent} 
-                      onChange={(e) => handleUpdateConfig('savingsPercent', Number(e.target.value))}
-                      className="bg-transparent border-none p-0 text-[10px] font-black w-full text-center focus:ring-0"
-                    />
-                    <span className="text-gray-300 font-black text-[10px] ml-0.5">%</span>
-                  </div>
-                </div>
-              </div>
+              {/* Vertical Divider for Desktop */}
+              <div className="hidden lg:block w-[1px] h-10 bg-gray-100" />
 
-              {/* Desejos */}
-              <div className="space-y-1.5">
-                <label className="text-[8px] font-black uppercase text-gray-400 block tracking-widest">{t('wants').toUpperCase()} (%)</label>
-                <div className="flex flex-col gap-1">
-                  <div className="bg-white border border-[#F0F0F0] rounded-lg px-2.5 py-1 font-black text-green-600 text-[10px] shadow-sm truncate flex items-center min-h-[30px]">
-                    {formatCurrency(stats.res * (config.desiresPercent / 100))}
-                  </div>
-                  <div className="bg-[#F9F9F9] border border-[#F0F0F0] rounded-lg px-2.5 py-1 flex items-center justify-between shadow-sm focus-within:ring-1 focus-within:ring-[#FF385C]/10 transition-all min-h-[30px]">
-                    <input 
-                      type="number" 
-                      min="0" max="100"
-                      value={config.desiresPercent} 
-                      onChange={(e) => handleUpdateConfig('desiresPercent', Number(e.target.value))}
-                      className="bg-transparent border-none p-0 text-[10px] font-black w-full text-center focus:ring-0"
-                    />
-                    <span className="text-gray-300 font-black text-[10px] ml-0.5">%</span>
+              {/* Allocation Grids - Flex Row Slim */}
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+                
+                {/* Necessidades */}
+                <div className="space-y-1">
+                  <label className="text-[7px] font-black uppercase text-gray-400 block tracking-widest">{t('needs').toUpperCase()} (%)</label>
+                  <div className="flex items-center gap-1">
+                    <div className="bg-[#F9F9F9] border border-[#F0F0F0] rounded-lg px-2 py-1 flex items-center justify-between shadow-sm focus-within:ring-1 focus-within:ring-[#FF385C]/10 transition-all w-[60px] shrink-0">
+                      <input 
+                        type="number" 
+                        min="0" max="100"
+                        value={config.needsPercent} 
+                        onChange={(e) => handleUpdateConfig('needsPercent', Number(e.target.value))}
+                        className="bg-transparent border-none p-0 text-[10px] font-black w-full text-center focus:ring-0"
+                      />
+                      <span className="text-gray-300 font-black text-[10px] ml-0.5">%</span>
+                    </div>
+                    <div className="bg-white border border-[#F0F0F0] rounded-lg px-2.5 py-1 font-black text-green-600 text-[10px] shadow-sm truncate flex items-center flex-1 min-h-[26px]">
+                      {formatCurrency(stats.res * (config.needsPercent / 100))}
+                    </div>
                   </div>
                 </div>
+
+                {/* Poupança */}
+                <div className="space-y-1">
+                  <label className="text-[7px] font-black uppercase text-gray-400 block tracking-widest">{t('savings').toUpperCase()} (%)</label>
+                  <div className="flex items-center gap-1">
+                    <div className="bg-[#F9F9F9] border border-[#F0F0F0] rounded-lg px-2 py-1 flex items-center justify-between shadow-sm focus-within:ring-1 focus-within:ring-[#FF385C]/10 transition-all w-[60px] shrink-0">
+                      <input 
+                        type="number" 
+                        min="0" max="100"
+                        value={config.savingsPercent} 
+                        onChange={(e) => handleUpdateConfig('savingsPercent', Number(e.target.value))}
+                        className="bg-transparent border-none p-0 text-[10px] font-black w-full text-center focus:ring-0"
+                      />
+                      <span className="text-gray-300 font-black text-[10px] ml-0.5">%</span>
+                    </div>
+                    <div className="bg-white border border-[#F0F0F0] rounded-lg px-2.5 py-1 font-black text-green-600 text-[10px] shadow-sm truncate flex items-center flex-1 min-h-[26px]">
+                      {formatCurrency(stats.res * (config.savingsPercent / 100))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Desejos */}
+                <div className="space-y-1">
+                  <label className="text-[7px] font-black uppercase text-gray-400 block tracking-widest">{t('wants').toUpperCase()} (%)</label>
+                  <div className="flex items-center gap-1">
+                    <div className="bg-[#F9F9F9] border border-[#F0F0F0] rounded-lg px-2 py-1 flex items-center justify-between shadow-sm focus-within:ring-1 focus-within:ring-[#FF385C]/10 transition-all w-[60px] shrink-0">
+                      <input 
+                        type="number" 
+                        min="0" max="100"
+                        value={config.desiresPercent} 
+                        onChange={(e) => handleUpdateConfig('desiresPercent', Number(e.target.value))}
+                        className="bg-transparent border-none p-0 text-[10px] font-black w-full text-center focus:ring-0"
+                      />
+                      <span className="text-gray-300 font-black text-[10px] ml-0.5">%</span>
+                    </div>
+                    <div className="bg-white border border-[#F0F0F0] rounded-lg px-2.5 py-1 font-black text-green-600 text-[10px] shadow-sm truncate flex items-center flex-1 min-h-[26px]">
+                      {formatCurrency(stats.res * (config.desiresPercent / 100))}
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
@@ -352,7 +361,6 @@ const MonthlyControl: React.FC = () => {
             return (
               <div key={tx.id} className={`airbnb-card p-2 md:p-3 border-l-[3px] transition-all flex flex-col md:flex-row items-center justify-between gap-2 ${tx.paid ? 'bg-white opacity-95 shadow-sm' : 'bg-white shadow-md'} ${tx.type === 'Receita' ? 'border-l-green-500' : 'border-l-red-500'}`}>
                 <div className="flex items-center gap-3 w-full md:w-auto min-w-0">
-                  {/* Status Icon */}
                   <button 
                     onClick={() => handleTogglePaid(tx)}
                     className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center transition-all shrink-0 ${tx.paid ? 'bg-green-100 text-green-600 border-2 border-green-200' : 'bg-gray-50 text-gray-200 border-2 border-dashed border-gray-100'}`}
@@ -360,7 +368,6 @@ const MonthlyControl: React.FC = () => {
                     <CheckCircle2 size={tx.paid ? 16 : 14} />
                   </button>
                   
-                  {/* Info Text */}
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mb-0.5">
                       <span className="text-[7px] font-black uppercase text-gray-400 tracking-widest">{t('day')} {tx.day}</span>
@@ -373,7 +380,6 @@ const MonthlyControl: React.FC = () => {
                     
                     <h4 className="font-extrabold text-xs md:text-sm text-gray-800 truncate leading-tight tracking-tight mb-0.5">{tx.description}</h4>
                     
-                    {/* Tags Section */}
                     <div className="flex flex-wrap items-center gap-1">
                       {category && (
                         <div className="flex items-center gap-1 text-[7px] font-black uppercase text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">
@@ -394,7 +400,6 @@ const MonthlyControl: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Value and Actions */}
                 <div className="flex items-center justify-between md:justify-end w-full md:w-auto gap-4 md:gap-6">
                   <span className={`text-sm md:text-base font-black whitespace-nowrap tracking-tight ${tx.type === 'Receita' ? 'text-green-600' : 'text-red-600'}`}>
                     {tx.type === 'Receita' ? '+' : '-'} {formatCurrency(tx.value)}
