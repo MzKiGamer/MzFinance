@@ -5,8 +5,9 @@ import { supabase } from '../lib/supabase';
 
 interface AuthContextType {
   currentUser: User | null;
+  setCurrentUser: (user: User | null) => void;
   users: User[];
-  login: (email: string, passwordHash: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, passwordHash: string) => Promise<{ success: boolean; data?: any; error?: string }>;
   logout: () => void;
   register: (user: Omit<User, 'id' | 'username'>) => Promise<void>;
   requestPasswordReset: (email: string) => Promise<{ success: boolean; error?: string }>;
@@ -16,16 +17,22 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Helper to map snake_case profile to camelCase User
 const mapProfile = (p: any): User => ({
   id: p.id,
-  name: p.name,
-  username: p.username,
+  name: p.name || 'Usuário',
+  username: p.username || 'user',
   email: p.email,
-  role: p.role,
-  passwordHash: '', // Not returned/needed in frontend
+  role: p.role || 'responsible',
+  passwordHash: '',
   responsibleId: p.responsible_id,
-  permissions: p.permissions
+  permissions: p.permissions || {
+    canEditTransactions: true,
+    canViewPatrimony: true,
+    canEditPatrimony: true,
+    canEditGoals: true,
+    canAccessReports: true,
+    canManageSettings: true,
+  }
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -35,20 +42,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return session ? JSON.parse(session) : null;
   });
 
-  const fetchUserProfile = useCallback(async (userId: string) => {
+  const fetchUserProfile = useCallback(async (userId: string, metadata?: any) => {
     if (!supabase) return null;
     try {
+      // Tenta buscar o perfil na tabela 'profiles'
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.warn("Perfil não encontrado na tabela 'profiles', usando metadados do Auth.");
+        // Se a tabela não existir ou o perfil não estiver lá, cria um objeto básico
+        return mapProfile({
+          id: userId,
+          name: metadata?.name || metadata?.full_name || 'Usuário Mz',
+          email: metadata?.email,
+          role: 'responsible'
+        });
+      }
       return mapProfile(data);
     } catch (err) {
       console.error("Erro ao buscar perfil:", err);
-      return null;
+      return mapProfile({ id: userId, name: 'Usuário Mz', role: 'responsible' });
     }
   }, []);
 
@@ -60,8 +77,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (event === 'SIGNED_OUT') {
         setCurrentUser(null);
         sessionStorage.removeItem('mzfinance_session');
-      } else if (session?.user) {
-        const profile = await fetchUserProfile(session.user.id);
+      } else if (session?.user && !currentUser) {
+        const profile = await fetchUserProfile(session.user.id, session.user.user_metadata);
         if (profile) {
           setCurrentUser(profile);
           sessionStorage.setItem('mzfinance_session', JSON.stringify(profile));
@@ -70,7 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchUserProfile]);
+  }, [fetchUserProfile, currentUser]);
 
   const requestPasswordReset = async (email: string) => {
     if (!supabase) return { success: false, error: 'Banco de dados não configurado.' };
@@ -87,7 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const login = async (email: string, passwordHash: string) => {
-    if (!supabase) return { success: false, error: "Erro de conexão." };
+    if (!supabase) return { success: false, error: "Erro de conexão com o banco." };
 
     try {
       const auth = (supabase.auth as any);
@@ -97,20 +114,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
-        if (error.message.includes("Email not confirmed")) {
-          return { success: false, error: "E-mail não confirmado. Verifique sua caixa de entrada." };
-        }
-        return { success: false, error: "E-mail ou senha incorretos." };
+        return { success: false, error: error.message };
       }
 
       if (data.user) {
-        const fullProfile = await fetchUserProfile(data.user.id);
-        if (fullProfile) {
-          setCurrentUser(fullProfile);
-          return { success: true };
-        }
+        const profile = await fetchUserProfile(data.user.id, data.user.user_metadata);
+        return { success: true, data: profile };
       }
-      return { success: false, error: "Falha ao carregar perfil." };
+      return { success: false, error: "Usuário não retornado pelo servidor." };
     } catch (err: any) {
       return { success: false, error: err.message };
     }
@@ -120,56 +131,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (supabase) await (supabase.auth as any).signOut();
     setCurrentUser(null);
     sessionStorage.removeItem('mzfinance_session');
-    window.location.href = '#/login';
   };
 
   const register = async (userData: Omit<User, 'id' | 'username'>) => {
     if (!supabase) throw new Error("Banco de dados não configurado.");
-
-    try {
-      const autoUsername = userData.email?.split('@')[0] || `user_${Math.random().toString(36).substring(7)}`;
-
-      const auth = (supabase.auth as any);
-      const { data, error } = await auth.signUp({
+    const autoUsername = userData.email?.split('@')[0] || `user_${Math.random().toString(36).substring(7)}`;
+    const auth = (supabase.auth as any);
+    const { data, error } = await auth.signUp({
+      email: userData.email,
+      password: userData.passwordHash,
+      options: { data: { name: userData.name, username: autoUsername } }
+    });
+    if (error) throw error;
+    if (data.user) {
+      await supabase.from('profiles').insert([{
+        id: data.user.id,
+        name: userData.name,
+        username: autoUsername,
         email: userData.email,
-        password: userData.passwordHash,
-        options: {
-          data: { name: userData.name, username: autoUsername }
-        }
-      });
-
-      if (error) throw error;
-      if (!data.user) throw new Error("Não foi possível criar a conta.");
-
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert([{
-          id: data.user.id,
-          name: userData.name,
-          username: autoUsername,
-          email: userData.email,
-          role: userData.role,
-          permissions: userData.permissions,
-          responsible_id: userData.responsibleId || null
-        }]);
-
-      if (profileError) throw profileError;
-    } catch (err: any) {
-      throw err;
+        role: userData.role,
+        permissions: userData.permissions,
+        responsible_id: userData.responsibleId || null
+      }]);
     }
   };
 
   const updateDependentPermissions = async (userId: string, permissions: UserPermissions) => {
     if (!supabase) return;
     try {
-      await supabase
-        .from('profiles')
-        .update({ permissions })
-        .eq('id', userId);
-      
-      if (currentUser?.id === userId) {
-        setCurrentUser(prev => prev ? { ...prev, permissions } : null);
-      }
+      await supabase.from('profiles').update({ permissions }).eq('id', userId);
+      if (currentUser?.id === userId) setCurrentUser(prev => prev ? { ...prev, permissions } : null);
     } catch (err) {
       console.error("Erro ao atualizar permissões:", err);
     }
@@ -186,7 +177,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider value={{ 
-      currentUser, users, login, logout, register, requestPasswordReset,
+      currentUser, setCurrentUser, users, login, logout, register, requestPasswordReset,
       updateDependentPermissions, deleteUser 
     }}>
       {children}
