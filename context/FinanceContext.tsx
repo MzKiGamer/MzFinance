@@ -25,6 +25,7 @@ interface FinanceContextType {
   saveTransaction: (tx: Transaction) => Promise<void>;
   setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>;
   deleteTransaction: (id: string) => Promise<void>;
+  applyFixedEntries: (monthCode: string) => Promise<void>;
   assets: Asset[];
   saveAsset: (asset: Asset) => Promise<void>;
   deleteAsset: (id: string) => Promise<void>;
@@ -56,12 +57,10 @@ const mapToJS = (data: any[] | null) => {
 const mapToDBItem = (item: any, userId: string) => {
   const newItem: any = {};
   for (let key in item) {
-    newItem[camelToSnake(key)] = item[key];
+    const snakeKey = camelToSnake(key);
+    newItem[snakeKey] = item[key];
   }
   newItem.user_id = userId;
-  if (!newItem.id && newItem.month_code) {
-    newItem.id = `mconf_${userId}_${newItem.month_code}`;
-  }
   return newItem;
 };
 
@@ -69,8 +68,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const { currentUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const isInitialLoadDone = useRef(false);
-
+  
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
   const [cards, setCards] = useState<Card[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -102,14 +100,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       setTransactions(mapToJS(txs));
       
-      // Lógica de Mesclagem de Categorias: Garante que as categorias do sistema (DEFAULT_CATEGORIES)
-      // sempre existam, mesmo que não estejam no banco de dados.
       const fetchedCats = mapToJS(cats);
       const combinedCats = [...DEFAULT_CATEGORIES];
       fetchedCats.forEach(fc => {
-        if (!combinedCats.find(c => c.id === fc.id)) {
-          combinedCats.push(fc);
-        }
+        if (!combinedCats.find(c => c.id === fc.id)) combinedCats.push(fc);
       });
       setCategories(combinedCats);
 
@@ -119,7 +113,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setAssets(mapToJS(asts));
       setInvestments(mapToJS(invs));
       setMonthConfigs(mapToJS(mconfs));
-      isInitialLoadDone.current = true;
     } catch (err) {
       console.error("Mz Finance Load Error:", err);
     } finally {
@@ -136,17 +129,21 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsSyncing(true);
     try {
       const dbItem = mapToDBItem(item, currentUser.id);
-      const { error } = await supabase.from(table).upsert(dbItem, { onConflict: 'id' });
-      if (error) throw error;
+      const { error, data } = await supabase.from(table).upsert(dbItem, { onConflict: 'id' }).select();
+      
+      if (error) {
+        console.error(`Erro detalhado Supabase (${table}):`, error.message, error.details, error.hint);
+        throw error;
+      }
       
       setter(prev => {
         const exists = prev.find(i => i.id === item.id);
         if (exists) return prev.map(i => i.id === item.id ? item : i);
         return [...prev, item];
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error(`Error saving to ${table}:`, err);
-      alert("Erro ao salvar dados. Verifique sua conexão.");
+      alert(`Falha ao salvar: ${err.message || "Verifique os logs do console"}`);
     } finally {
       setIsSyncing(false);
     }
@@ -160,6 +157,46 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (error) throw error;
     } catch (err) {
       console.error(`Error deleting from ${table}:`, err);
+    }
+  };
+
+  const applyFixedEntries = async (monthCode: string) => {
+    if (!currentUser || !supabase || fixedEntries.length === 0) return;
+    
+    // Verifica se já existem transações fixas aplicadas para este mês
+    const hasFixedApplied = transactions.some(tx => tx.monthCode === monthCode && tx.isFixed);
+    if (hasFixedApplied) return;
+
+    setIsSyncing(true);
+    const newTxs: Transaction[] = [];
+
+    fixedEntries.filter(f => f.active).forEach(fixed => {
+      newTxs.push({
+        id: crypto.randomUUID(),
+        monthCode: monthCode,
+        description: fixed.description,
+        day: fixed.day,
+        type: fixed.type,
+        value: fixed.value,
+        categoryId: fixed.categoryId,
+        paymentMethod: fixed.paymentMethod,
+        paid: false,
+        isFixed: true,
+        notes: fixed.notes || ''
+      });
+    });
+
+    if (newTxs.length > 0) {
+      try {
+        const dbItems = newTxs.map(tx => mapToDBItem(tx, currentUser.id));
+        const { error } = await supabase.from('transactions').insert(dbItems);
+        if (error) throw error;
+        setTransactions(prev => [...prev, ...newTxs]);
+      } catch (err) {
+        console.error("Erro ao aplicar gastos fixos:", err);
+      } finally {
+        setIsSyncing(false);
+      }
     }
   };
 
@@ -181,16 +218,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updateMonthConfig = async (config: MonthConfig) => {
     if (!currentUser || !supabase) return;
-    const dbItem = mapToDBItem(config, currentUser.id);
+    const configToSave = {
+      ...config,
+      id: config.id || `mconf_${currentUser.id}_${config.monthCode}`
+    };
+    const dbItem = mapToDBItem(configToSave, currentUser.id);
     await supabase.from('month_configs').upsert(dbItem, { onConflict: 'id' });
     setMonthConfigs(prev => {
       const idx = prev.findIndex(c => c.monthCode === config.monthCode);
       if (idx >= 0) {
         const copy = [...prev];
-        copy[idx] = config;
+        copy[idx] = configToSave;
         return copy;
       }
-      return [...prev, config];
+      return [...prev, configToSave];
     });
   };
 
@@ -201,6 +242,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       goals, saveGoal, deleteGoal,
       fixedEntries, saveFixedEntry, deleteFixedEntry,
       transactions, saveTransaction, setTransactions, deleteTransaction,
+      applyFixedEntries,
       assets, saveAsset, deleteAsset,
       investments, saveInvestment, deleteInvestment,
       monthConfigs, updateMonthConfig,

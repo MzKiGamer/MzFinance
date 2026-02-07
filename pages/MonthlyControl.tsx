@@ -7,7 +7,7 @@ import {
   Plus, Trash2, Pencil, ChevronLeft, ChevronRight, ChevronDown, 
   CheckCircle2, X, Calendar as CalendarIcon, Info, Target, 
   Wallet, ArrowUpCircle, ArrowDownCircle, Banknote, Landmark,
-  TrendingUp, Tag as TagIcon
+  TrendingUp, Tag as TagIcon, Repeat
 } from 'lucide-react';
 import { Transaction, TransactionType, Category, Card, Goal, MonthConfig, Investment } from '../types';
 
@@ -16,7 +16,6 @@ const EMOJIS = ['🛒', '⚠️', '📱', '🐶', '👚', '💅', '🎁', '💊'
 const CARD_COLORS = ['#222222', '#FF385C', '#6366f1', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
 
 const MonthlyControl: React.FC = () => {
-  // Fix: replace missing setters with save methods from FinanceContext to resolve type errors and ensure persistence
   const { 
     transactions, saveTransaction, 
     deleteTransaction,
@@ -24,7 +23,9 @@ const MonthlyControl: React.FC = () => {
     cards, saveCard,
     goals, saveGoal,
     investments, saveInvestment,
-    monthConfigs, updateMonthConfig 
+    monthConfigs, updateMonthConfig,
+    applyFixedEntries,
+    isSyncing
   } = useFinance();
   
   const { t, language } = useLanguage();
@@ -42,6 +43,13 @@ const MonthlyControl: React.FC = () => {
   const [modalCategoryId, setModalCategoryId] = useState('');
   
   const [quickAddType, setQuickAddType] = useState<'category' | 'card' | 'goal' | 'investment' | null>(null);
+
+  // Efeito para aplicar gastos fixos automaticamente ao abrir um mês
+  useEffect(() => {
+    if (!isSyncing) {
+       applyFixedEntries(currentMonthCode);
+    }
+  }, [currentMonthCode, applyFixedEntries, isSyncing]);
 
   const monthTransactions = useMemo(() => 
     transactions.filter(t => t.monthCode === currentMonthCode).sort((a, b) => b.day - a.day)
@@ -87,7 +95,6 @@ const MonthlyControl: React.FC = () => {
     updateMonthConfig({ ...config, [key]: newVal, income: stats.res });
   };
 
-  // Fix: Use saveTransaction instead of setTransactions to ensure data is updated in Supabase
   const handleTogglePaid = (tx: Transaction) => {
     const newPaidStatus = !tx.paid;
     const today = new Date().toISOString().split('T')[0];
@@ -123,7 +130,6 @@ const MonthlyControl: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  // Fix: Use saveTransaction instead of setTransactions to ensure data is updated in Supabase
   const handleSaveTransaction = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -148,7 +154,6 @@ const MonthlyControl: React.FC = () => {
     setIsModalOpen(false);
   };
 
-  // Fix: Use saveCategory instead of setCategories to ensure data is updated in Supabase
   const handleQuickAddCategory = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -163,7 +168,6 @@ const MonthlyControl: React.FC = () => {
     setQuickAddType(null);
   };
 
-  // Fix: Use saveCard instead of setCards to ensure data is updated in Supabase
   const handleQuickAddCard = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -179,7 +183,6 @@ const MonthlyControl: React.FC = () => {
     setQuickAddType(null);
   };
 
-  // Fix: Use saveGoal instead of setGoals to ensure data is updated in Supabase
   const handleQuickAddGoal = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -194,7 +197,6 @@ const MonthlyControl: React.FC = () => {
     setQuickAddType(null);
   };
 
-  // Fix: Use saveInvestment instead of setInvestments to ensure data is updated in Supabase
   const handleQuickAddInvestment = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -360,8 +362,7 @@ const MonthlyControl: React.FC = () => {
           {monthTransactions.map(tx => {
             const category = categories.find(c => c.id === tx.categoryId);
             const goal = goals.find(g => g.id === tx.goalId);
-            const investment = investments.find(i => i.id === tx.investmentId);
-
+            
             return (
               <div key={tx.id} className={`airbnb-card px-4 py-4 border-l-[3px] transition-all grid grid-cols-1 md:grid-cols-12 items-center gap-3 ${tx.paid ? 'bg-white opacity-95 shadow-sm' : 'bg-white shadow-md'} ${tx.type === 'Receita' ? 'border-l-green-500' : 'border-l-red-500'}`}>
                 
@@ -372,7 +373,12 @@ const MonthlyControl: React.FC = () => {
                   >
                     <CheckCircle2 size={20} />
                   </button>
-                  <h4 className="font-extrabold text-[17px] text-gray-800 truncate leading-tight tracking-tight">{tx.description}</h4>
+                  <div className="truncate">
+                    <h4 className="font-extrabold text-[17px] text-gray-800 truncate leading-tight tracking-tight flex items-center gap-2">
+                      {tx.description}
+                      {tx.isFixed && <Repeat size={12} className="text-gray-300" />}
+                    </h4>
+                  </div>
                 </div>
 
                 <div className="md:col-span-5 flex flex-wrap items-center justify-center gap-3">
@@ -505,19 +511,6 @@ const MonthlyControl: React.FC = () => {
                 )}
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('investments')}</label>
-                <div className="flex gap-2">
-                  <select name="investmentId" defaultValue={editingTransaction?.investmentId || ""} className="flex-1 font-bold py-3 px-5 text-[13px] min-h-[50px] appearance-none">
-                    <option value="">{t('none')}</option>
-                    {investments.map(inv => <option key={inv.id} value={inv.id}>{inv.type} - {inv.broker} ({formatCurrency(inv.value)})</option>)}
-                  </select>
-                  <button type="button" onClick={() => setQuickAddType('investment')} className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-400 hover:text-black shrink-0 transition-colors">
-                    <Plus size={20} />
-                  </button>
-                </div>
-              </div>
-
               <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors">
                 <input type="checkbox" name="paid" id="paidCheck" defaultChecked={editingTransaction?.paid || false} className="w-6 h-6 rounded accent-[#FF385C]" />
                 <label htmlFor="paidCheck" className="text-[11px] font-black text-gray-600 flex-1 cursor-pointer">{t('alreadyPaid')}</label>
@@ -531,7 +524,7 @@ const MonthlyControl: React.FC = () => {
 
       {/* Quick Add Sub-Modals */}
       {quickAddType && (
-        <div className="fixed inset-0 bg-black/70 z-[110] flex items-center justify-center p-4 backdrop-blur-md overflow-y-auto">
+        <div className="fixed inset-0 bg-black/70 z-[110] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-[20px] w-full max-w-xs p-6 shadow-2xl animate-in zoom-in duration-300 relative my-auto">
             <button onClick={() => setQuickAddType(null)} className="absolute right-4 top-4 p-1 hover:bg-gray-100 rounded-full text-gray-400"><X size={16} /></button>
             <h3 className="text-sm font-black mb-3">Novo {quickAddType}</h3>
