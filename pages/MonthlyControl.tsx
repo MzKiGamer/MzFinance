@@ -81,8 +81,8 @@ const MonthlyControl: React.FC = () => {
       monthCode: currentMonthCode, 
       income: stats.res, 
       needsPercent: 50, 
-      desiresPercent: 30, 
-      savingsPercent: 20
+      desiresPercent: 20, 
+      savingsPercent: 30
     };
   }, [monthConfigs, currentMonthCode, stats.res]);
 
