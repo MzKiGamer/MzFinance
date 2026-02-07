@@ -164,11 +164,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const applyFixedEntries = async (monthCode: string) => {
-    // Verificações de bloqueio iniciais
     if (!currentUser || !supabase || isLoading || fixedEntries.length === 0) return;
     if (appliedMonthsRef.current.has(monthCode)) return;
 
-    // 1. Verificar se é um mês passado
     const [mStr, yStr] = monthCode.split('-');
     const monthYear = 2000 + parseInt(yStr);
     const monthIndex = MONTH_CODES_LIST.indexOf(mStr);
@@ -181,7 +179,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
-    // 2. Verificar se já existe registro no MonthConfig ou se já existem transações fixas no estado local
     const config = monthConfigs.find(c => c.monthCode === monthCode);
     const hasFixedAlready = transactions.some(tx => tx.monthCode === monthCode && tx.isFixed);
     
@@ -190,8 +187,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
-    // Inicia processo de aplicação
-    appliedMonthsRef.current.add(monthCode); // Bloqueio imediato para evitar race condition
+    appliedMonthsRef.current.add(monthCode);
     setIsSyncing(true);
 
     const newTxs: Transaction[] = fixedEntries
@@ -218,20 +214,25 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         
         setTransactions(prev => [...prev, ...newTxs]);
         
-        // Registrar aplicação no MonthConfig
         const updatedConfig: MonthConfig = config 
           ? { ...config, fixedApplied: true }
-          : { monthCode, income: 0, needsPercent: 50, desiresPercent: 30, savingsPercent: 20, fixedApplied: true };
+          : { 
+              monthCode, 
+              income: 0, 
+              needsPercent: 50, 
+              desiresPercent: 20, // Atualizado para 20%
+              savingsPercent: 30, // Atualizado para 30%
+              fixedApplied: true 
+            };
           
         await updateMonthConfig(updatedConfig);
       } catch (err) {
         console.error("Erro ao aplicar gastos fixos:", err);
-        appliedMonthsRef.current.delete(monthCode); // Libera o bloqueio se falhar
+        appliedMonthsRef.current.delete(monthCode);
       } finally {
         setIsSyncing(false);
       }
     } else {
-      // Se não houver itens fixos para aplicar, marcamos como feito
       if (config && !config.fixedApplied) {
          await updateMonthConfig({ ...config, fixedApplied: true });
       }
