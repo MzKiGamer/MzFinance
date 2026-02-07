@@ -61,6 +61,18 @@ const MonthlyControl: React.FC = () => {
     return { res, exp, balance: res - exp };
   }, [monthTransactions]);
 
+  // Novo calculo para contadores de transações
+  const transactionStats = useMemo(() => {
+    const revs = monthTransactions.filter(t => t.type === 'Receita');
+    const exps = monthTransactions.filter(t => t.type === 'Despesa');
+    return {
+      revTotal: revs.length,
+      revPending: revs.filter(t => !t.paid).length,
+      expTotal: exps.length,
+      expPending: exps.filter(t => !t.paid).length
+    };
+  }, [monthTransactions]);
+
   const config = useMemo(() => {
     const found = monthConfigs.find(c => c.monthCode === currentMonthCode);
     if (found) return found;
@@ -346,9 +358,22 @@ const MonthlyControl: React.FC = () => {
       {/* Transactions Section */}
       <div className="space-y-3">
         <div className="flex items-center justify-between ml-1">
-          <div className="flex items-center gap-2">
-             <Wallet size={16} className="text-gray-400" />
-             <h2 className="text-sm font-black uppercase tracking-tight">{t('transactions')}</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+             <div className="flex items-center gap-2">
+                <Wallet size={16} className="text-gray-400" />
+                <h2 className="text-sm font-black uppercase tracking-tight">{t('transactions')}</h2>
+             </div>
+             {/* Contador de status das transações */}
+             <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-1.5 bg-green-50 px-2.5 py-1 rounded-full border border-green-100 shadow-sm">
+                   <span className="text-[9px] font-black text-green-700 uppercase tracking-tighter">{t('revenues')}</span>
+                   <span className="text-[10px] font-black text-green-800">{transactionStats.revTotal}/{transactionStats.revPending}</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-red-50 px-2.5 py-1 rounded-full border border-red-100 shadow-sm">
+                   <span className="text-[9px] font-black text-red-700 uppercase tracking-tighter">{t('expenses')}</span>
+                   <span className="text-[10px] font-black text-red-800">{transactionStats.expTotal}/{transactionStats.expPending}</span>
+                </div>
+             </div>
           </div>
           <button 
             onClick={handleOpenNewTransaction}
