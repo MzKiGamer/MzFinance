@@ -69,8 +69,9 @@ const mapToDBItem = (item: any, userId: string, table: string) => {
 
 export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const appliedMonthsRef = useRef<Set<string>>(new Set());
   
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
   const [cards, setCards] = useState<Card[]>([]);
@@ -124,7 +125,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [currentUser]);
 
   useEffect(() => {
-    if (currentUser) fetchData();
+    if (currentUser) {
+      fetchData();
+      appliedMonthsRef.current.clear();
+    }
   }, [currentUser, fetchData]);
 
   const saveItem = async (table: string, item: any, setter: React.Dispatch<React.SetStateAction<any[]>>) => {
@@ -160,24 +164,36 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const applyFixedEntries = async (monthCode: string) => {
-    if (!currentUser || !supabase || fixedEntries.length === 0 || isLoading) return;
-    
+    // Verificações de bloqueio iniciais
+    if (!currentUser || !supabase || isLoading || fixedEntries.length === 0) return;
+    if (appliedMonthsRef.current.has(monthCode)) return;
+
     // 1. Verificar se é um mês passado
     const [mStr, yStr] = monthCode.split('-');
     const monthYear = 2000 + parseInt(yStr);
     const monthIndex = MONTH_CODES_LIST.indexOf(mStr);
     const targetDate = new Date(monthYear, monthIndex, 1);
-    
     const now = new Date();
     const currentFirstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     
-    if (targetDate < currentFirstOfMonth) return; // Não aplica em meses que já passaram
+    if (targetDate < currentFirstOfMonth) {
+      appliedMonthsRef.current.add(monthCode);
+      return;
+    }
 
-    // 2. Verificar se já foi aplicado neste mês (conforme registro na MonthConfig)
+    // 2. Verificar se já existe registro no MonthConfig ou se já existem transações fixas no estado local
     const config = monthConfigs.find(c => c.monthCode === monthCode);
-    if (config?.fixedApplied) return;
+    const hasFixedAlready = transactions.some(tx => tx.monthCode === monthCode && tx.isFixed);
+    
+    if (config?.fixedApplied || hasFixedAlready) {
+      appliedMonthsRef.current.add(monthCode);
+      return;
+    }
 
+    // Inicia processo de aplicação
+    appliedMonthsRef.current.add(monthCode); // Bloqueio imediato para evitar race condition
     setIsSyncing(true);
+
     const newTxs: Transaction[] = fixedEntries
       .filter(f => f.active)
       .map(fixed => ({
@@ -202,7 +218,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         
         setTransactions(prev => [...prev, ...newTxs]);
         
-        // Marcar mês como aplicado para não repetir se o usuário deletar
+        // Registrar aplicação no MonthConfig
         const updatedConfig: MonthConfig = config 
           ? { ...config, fixedApplied: true }
           : { monthCode, income: 0, needsPercent: 50, desiresPercent: 30, savingsPercent: 20, fixedApplied: true };
@@ -210,11 +226,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         await updateMonthConfig(updatedConfig);
       } catch (err) {
         console.error("Erro ao aplicar gastos fixos:", err);
+        appliedMonthsRef.current.delete(monthCode); // Libera o bloqueio se falhar
       } finally {
         setIsSyncing(false);
       }
     } else {
-      // Se não houver itens fixos, marcamos como aplicado mesmo assim para evitar verificações repetidas
+      // Se não houver itens fixos para aplicar, marcamos como feito
       if (config && !config.fixedApplied) {
          await updateMonthConfig({ ...config, fixedApplied: true });
       }
@@ -224,10 +241,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updateMonthConfig = async (config: MonthConfig) => {
     if (!currentUser || !supabase) return;
-    const configToSave = {
-      ...config,
-      id: config.id || `mconf_${currentUser.id}_${config.monthCode}`
-    };
+    const configId = config.id || `mconf_${currentUser.id}_${config.monthCode}`;
+    const configToSave = { ...config, id: configId };
+    
     const dbItem = mapToDBItem(configToSave, currentUser.id, 'month_configs');
     await supabase.from('month_configs').upsert(dbItem, { onConflict: 'id' });
     

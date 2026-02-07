@@ -25,6 +25,7 @@ const MonthlyControl: React.FC = () => {
     investments, saveInvestment,
     monthConfigs, updateMonthConfig,
     applyFixedEntries,
+    isLoading,
     isSyncing
   } = useFinance();
   
@@ -44,12 +45,12 @@ const MonthlyControl: React.FC = () => {
   
   const [quickAddType, setQuickAddType] = useState<'category' | 'card' | 'goal' | 'investment' | null>(null);
 
-  // Efeito para aplicar gastos fixos automaticamente ao abrir um mês (somente se não for passado)
+  // Efeito para aplicar gastos fixos automaticamente ao abrir um mês
   useEffect(() => {
-    if (!isSyncing) {
+    if (!isLoading && !isSyncing) {
        applyFixedEntries(currentMonthCode);
     }
-  }, [currentMonthCode, applyFixedEntries, isSyncing]);
+  }, [currentMonthCode, applyFixedEntries, isLoading, isSyncing]);
 
   const monthTransactions = useMemo(() => 
     transactions.filter(t => t.monthCode === currentMonthCode).sort((a, b) => b.day - a.day)
@@ -86,10 +87,10 @@ const MonthlyControl: React.FC = () => {
   }, [monthConfigs, currentMonthCode, stats.res]);
 
   useEffect(() => {
-    if (config.income !== stats.res) {
+    if (!isLoading && config.income !== stats.res) {
       updateMonthConfig({ ...config, income: stats.res });
     }
-  }, [stats.res, config.income]);
+  }, [stats.res, config.income, isLoading, updateMonthConfig, config]);
 
   const formatCurrency = (val: number) => 
     new Intl.NumberFormat(language === 'pt' ? 'pt-BR' : 'en-US', { 
@@ -399,7 +400,6 @@ const MonthlyControl: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal e Sub-Modals mantidos ... */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-[32px] w-full max-w-xl p-8 md:p-10 shadow-2xl animate-in zoom-in duration-300 relative my-auto">
