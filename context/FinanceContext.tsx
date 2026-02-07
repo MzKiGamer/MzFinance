@@ -8,6 +8,8 @@ import { DEFAULT_CATEGORIES } from '../constants';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
+const MONTH_CODES_LIST = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+
 interface FinanceContextType {
   categories: Category[];
   saveCategory: (category: Category) => Promise<void>;
@@ -33,7 +35,7 @@ interface FinanceContextType {
   saveInvestment: (investment: Investment) => Promise<void>;
   deleteInvestment: (id: string) => Promise<void>;
   monthConfigs: MonthConfig[];
-  updateMonthConfig: (config: MonthConfig) => void;
+  updateMonthConfig: (config: MonthConfig) => Promise<void>;
   isLoading: boolean;
   isSyncing: boolean;
 }
@@ -58,7 +60,6 @@ const mapToDBItem = (item: any, userId: string, table: string) => {
   const newItem: any = {};
   for (let key in item) {
     const snakeKey = camelToSnake(key);
-    // Remove campo 'notes' se estivermos salvando em 'fixed_entries' para evitar erro de coluna inexistente no Supabase
     if (table === 'fixed_entries' && snakeKey === 'notes') continue;
     newItem[snakeKey] = item[key];
   }
@@ -70,7 +71,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const { currentUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const isAppliedRef = useRef<Set<string>>(new Set());
   
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
   const [cards, setCards] = useState<Card[]>([]);
@@ -101,8 +101,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         fetchTable('month_configs'),
       ]);
 
-      const mappedTxs = mapToJS(txs);
-      setTransactions(mappedTxs);
+      setTransactions(mapToJS(txs));
       
       const fetchedCats = mapToJS(cats);
       const combinedCats = [...DEFAULT_CATEGORIES];
@@ -125,10 +124,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [currentUser]);
 
   useEffect(() => {
-    if (currentUser) {
-      fetchData();
-      isAppliedRef.current.clear();
-    }
+    if (currentUser) fetchData();
   }, [currentUser, fetchData]);
 
   const saveItem = async (table: string, item: any, setter: React.Dispatch<React.SetStateAction<any[]>>) => {
@@ -137,10 +133,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       const dbItem = mapToDBItem(item, currentUser.id, table);
       const { error } = await supabase.from(table).upsert(dbItem, { onConflict: 'id' });
-      
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
       
       setter(prev => {
         const exists = prev.find(i => i.id === item.id);
@@ -169,14 +162,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const applyFixedEntries = async (monthCode: string) => {
     if (!currentUser || !supabase || fixedEntries.length === 0 || isLoading) return;
     
-    // Evita loop infinito e múltiplas aplicações no mesmo mês durante a sessão
-    if (isAppliedRef.current.has(monthCode)) return;
+    // 1. Verificar se é um mês passado
+    const [mStr, yStr] = monthCode.split('-');
+    const monthYear = 2000 + parseInt(yStr);
+    const monthIndex = MONTH_CODES_LIST.indexOf(mStr);
+    const targetDate = new Date(monthYear, monthIndex, 1);
+    
+    const now = new Date();
+    const currentFirstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    if (targetDate < currentFirstOfMonth) return; // Não aplica em meses que já passaram
 
-    const hasFixedApplied = transactions.some(tx => tx.monthCode === monthCode && tx.isFixed);
-    if (hasFixedApplied) {
-      isAppliedRef.current.add(monthCode);
-      return;
-    }
+    // 2. Verificar se já foi aplicado neste mês (conforme registro na MonthConfig)
+    const config = monthConfigs.find(c => c.monthCode === monthCode);
+    if (config?.fixedApplied) return;
 
     setIsSyncing(true);
     const newTxs: Transaction[] = fixedEntries
@@ -200,14 +199,47 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const dbItems = newTxs.map(tx => mapToDBItem(tx, currentUser.id, 'transactions'));
         const { error } = await supabase.from('transactions').insert(dbItems);
         if (error) throw error;
+        
         setTransactions(prev => [...prev, ...newTxs]);
-        isAppliedRef.current.add(monthCode);
+        
+        // Marcar mês como aplicado para não repetir se o usuário deletar
+        const updatedConfig: MonthConfig = config 
+          ? { ...config, fixedApplied: true }
+          : { monthCode, income: 0, needsPercent: 50, desiresPercent: 30, savingsPercent: 20, fixedApplied: true };
+          
+        await updateMonthConfig(updatedConfig);
       } catch (err) {
         console.error("Erro ao aplicar gastos fixos:", err);
       } finally {
         setIsSyncing(false);
       }
+    } else {
+      // Se não houver itens fixos, marcamos como aplicado mesmo assim para evitar verificações repetidas
+      if (config && !config.fixedApplied) {
+         await updateMonthConfig({ ...config, fixedApplied: true });
+      }
+      setIsSyncing(false);
     }
+  };
+
+  const updateMonthConfig = async (config: MonthConfig) => {
+    if (!currentUser || !supabase) return;
+    const configToSave = {
+      ...config,
+      id: config.id || `mconf_${currentUser.id}_${config.monthCode}`
+    };
+    const dbItem = mapToDBItem(configToSave, currentUser.id, 'month_configs');
+    await supabase.from('month_configs').upsert(dbItem, { onConflict: 'id' });
+    
+    setMonthConfigs(prev => {
+      const idx = prev.findIndex(c => c.monthCode === config.monthCode);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = configToSave;
+        return copy;
+      }
+      return [...prev, configToSave];
+    });
   };
 
   const saveTransaction = (tx: Transaction) => saveItem('transactions', tx, setTransactions);
@@ -225,25 +257,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const deleteFixedEntry = (id: string) => deleteItem('fixed_entries', id, setFixedEntries);
   const deleteAsset = (id: string) => deleteItem('assets', id, setAssets);
   const deleteInvestment = (id: string) => deleteItem('investments', id, setInvestments);
-
-  const updateMonthConfig = async (config: MonthConfig) => {
-    if (!currentUser || !supabase) return;
-    const configToSave = {
-      ...config,
-      id: config.id || `mconf_${currentUser.id}_${config.monthCode}`
-    };
-    const dbItem = mapToDBItem(configToSave, currentUser.id, 'month_configs');
-    await supabase.from('month_configs').upsert(dbItem, { onConflict: 'id' });
-    setMonthConfigs(prev => {
-      const idx = prev.findIndex(c => c.monthCode === config.monthCode);
-      if (idx >= 0) {
-        const copy = [...prev];
-        copy[idx] = configToSave;
-        return copy;
-      }
-      return [...prev, configToSave];
-    });
-  };
 
   return (
     <FinanceContext.Provider value={{

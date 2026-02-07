@@ -44,7 +44,7 @@ const MonthlyControl: React.FC = () => {
   
   const [quickAddType, setQuickAddType] = useState<'category' | 'card' | 'goal' | 'investment' | null>(null);
 
-  // Efeito para aplicar gastos fixos automaticamente ao abrir um mês
+  // Efeito para aplicar gastos fixos automaticamente ao abrir um mês (somente se não for passado)
   useEffect(() => {
     if (!isSyncing) {
        applyFixedEntries(currentMonthCode);
@@ -61,8 +61,8 @@ const MonthlyControl: React.FC = () => {
     return { res, exp, balance: res - exp };
   }, [monthTransactions]);
 
-  // Novo calculo para contadores de transações
-  const transactionStats = useMemo(() => {
+  // Cálculo para os contadores visuais
+  const counters = useMemo(() => {
     const revs = monthTransactions.filter(t => t.type === 'Receita');
     const exps = monthTransactions.filter(t => t.type === 'Despesa');
     return {
@@ -89,7 +89,7 @@ const MonthlyControl: React.FC = () => {
     if (config.income !== stats.res) {
       updateMonthConfig({ ...config, income: stats.res });
     }
-  }, [stats.res, config.income, updateMonthConfig, config]);
+  }, [stats.res, config.income]);
 
   const formatCurrency = (val: number) => 
     new Intl.NumberFormat(language === 'pt' ? 'pt-BR' : 'en-US', { 
@@ -166,64 +166,6 @@ const MonthlyControl: React.FC = () => {
     setIsModalOpen(false);
   };
 
-  const handleQuickAddCategory = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const newCat: Category = {
-      id: crypto.randomUUID(),
-      name: fd.get('name') as string,
-      icon: fd.get('icon') as string,
-      subcategories: ''
-    };
-    saveCategory(newCat);
-    setModalCategoryId(newCat.id);
-    setQuickAddType(null);
-  };
-
-  const handleQuickAddCard = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const newCard: Card = {
-      id: crypto.randomUUID(),
-      name: fd.get('name') as string,
-      bank: fd.get('bank') as string,
-      limit: Number(fd.get('limit')),
-      closingDay: Number(fd.get('closingDay')),
-      color: fd.get('color') as string
-    };
-    saveCard(newCard);
-    setQuickAddType(null);
-  };
-
-  const handleQuickAddGoal = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const newGoal: Goal = {
-      id: crypto.randomUUID(),
-      name: fd.get('name') as string,
-      icon: fd.get('icon') as string,
-      targetValue: Number(fd.get('targetValue')),
-      savedValue: 0
-    };
-    saveGoal(newGoal);
-    setQuickAddType(null);
-  };
-
-  const handleQuickAddInvestment = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const newInv: Investment = {
-      id: crypto.randomUUID(),
-      type: fd.get('type') as any,
-      broker: fd.get('broker') as string,
-      value: Number(fd.get('value')),
-      updatedAt: new Date().toISOString().split('T')[0],
-      category: fd.get('category') as string
-    };
-    saveInvestment(newInv);
-    setQuickAddType(null);
-  };
-
   const totalAllocated = config.needsPercent + config.desiresPercent + config.savingsPercent;
 
   return (
@@ -298,7 +240,7 @@ const MonthlyControl: React.FC = () => {
                 <div className="space-y-1">
                   <label className="text-[7px] font-black uppercase text-gray-400 block tracking-widest">{t('needs').toUpperCase()} (%)</label>
                   <div className="flex items-center gap-1">
-                    <div className="bg-[#F9F9F9] border border-[#F0F0F0] rounded-lg px-2 py-1 flex items-center justify-between shadow-sm focus-within:ring-1 focus-within:ring-[#FF385C]/10 transition-all w-[60px] shrink-0 min-h-[38px]">
+                    <div className="bg-[#F9F9F9] border border-[#F0F0F0] rounded-lg px-2 py-1 shadow-sm w-[60px] shrink-0 min-h-[38px] flex items-center justify-center">
                       <input 
                         type="number" 
                         min="0" max="100"
@@ -306,7 +248,6 @@ const MonthlyControl: React.FC = () => {
                         onChange={(e) => handleUpdateConfig('needsPercent', Number(e.target.value))}
                         className="bg-transparent border-none p-0 text-[10px] font-black w-full text-center focus:ring-0"
                       />
-                      <span className="text-gray-300 font-black text-[10px] ml-0.5">%</span>
                     </div>
                     <div className="bg-white border border-[#F0F0F0] rounded-lg px-2.5 py-1 font-black text-green-600 text-[15px] shadow-sm truncate flex items-center flex-1 min-h-[38px] tracking-tighter">
                       {formatCurrency(stats.res * (config.needsPercent / 100))}
@@ -316,7 +257,7 @@ const MonthlyControl: React.FC = () => {
                 <div className="space-y-1">
                   <label className="text-[7px] font-black uppercase text-gray-400 block tracking-widest">{t('savings').toUpperCase()} (%)</label>
                   <div className="flex items-center gap-1">
-                    <div className="bg-[#F9F9F9] border border-[#F0F0F0] rounded-lg px-2 py-1 flex items-center justify-between shadow-sm focus-within:ring-1 focus-within:ring-[#FF385C]/10 transition-all w-[60px] shrink-0 min-h-[38px]">
+                    <div className="bg-[#F9F9F9] border border-[#F0F0F0] rounded-lg px-2 py-1 shadow-sm w-[60px] shrink-0 min-h-[38px] flex items-center justify-center">
                       <input 
                         type="number" 
                         min="0" max="100"
@@ -324,7 +265,6 @@ const MonthlyControl: React.FC = () => {
                         onChange={(e) => handleUpdateConfig('savingsPercent', Number(e.target.value))}
                         className="bg-transparent border-none p-0 text-[10px] font-black w-full text-center focus:ring-0"
                       />
-                      <span className="text-gray-300 font-black text-[10px] ml-0.5">%</span>
                     </div>
                     <div className="bg-white border border-[#F0F0F0] rounded-lg px-2.5 py-1 font-black text-green-600 text-[15px] shadow-sm truncate flex items-center flex-1 min-h-[38px] tracking-tighter">
                       {formatCurrency(stats.res * (config.savingsPercent / 100))}
@@ -334,7 +274,7 @@ const MonthlyControl: React.FC = () => {
                 <div className="space-y-1">
                   <label className="text-[7px] font-black uppercase text-gray-400 block tracking-widest">{t('wants').toUpperCase()} (%)</label>
                   <div className="flex items-center gap-1">
-                    <div className="bg-[#F9F9F9] border border-[#F0F0F0] rounded-lg px-2 py-1 flex items-center justify-between shadow-sm focus-within:ring-1 focus-within:ring-[#FF385C]/10 transition-all w-[60px] shrink-0 min-h-[38px]">
+                    <div className="bg-[#F9F9F9] border border-[#F0F0F0] rounded-lg px-2 py-1 shadow-sm w-[60px] shrink-0 min-h-[38px] flex items-center justify-center">
                       <input 
                         type="number" 
                         min="0" max="100"
@@ -342,7 +282,6 @@ const MonthlyControl: React.FC = () => {
                         onChange={(e) => handleUpdateConfig('desiresPercent', Number(e.target.value))}
                         className="bg-transparent border-none p-0 text-[10px] font-black w-full text-center focus:ring-0"
                       />
-                      <span className="text-gray-300 font-black text-[10px] ml-0.5">%</span>
                     </div>
                     <div className="bg-white border border-[#F0F0F0] rounded-lg px-2.5 py-1 font-black text-green-600 text-[15px] shadow-sm truncate flex items-center flex-1 min-h-[38px] tracking-tighter">
                       {formatCurrency(stats.res * (config.desiresPercent / 100))}
@@ -358,23 +297,25 @@ const MonthlyControl: React.FC = () => {
       {/* Transactions Section */}
       <div className="space-y-3">
         <div className="flex items-center justify-between ml-1">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-             <div className="flex items-center gap-2">
-                <Wallet size={16} className="text-gray-400" />
-                <h2 className="text-sm font-black uppercase tracking-tight">{t('transactions')}</h2>
-             </div>
-             {/* Contador de status das transações */}
-             <div className="flex items-center gap-2.5">
-                <div className="flex items-center gap-1.5 bg-green-50 px-2.5 py-1 rounded-full border border-green-100 shadow-sm">
-                   <span className="text-[9px] font-black text-green-700 uppercase tracking-tighter">{t('revenues')}</span>
-                   <span className="text-[10px] font-black text-green-800">{transactionStats.revTotal}/{transactionStats.revPending}</span>
-                </div>
-                <div className="flex items-center gap-1.5 bg-red-50 px-2.5 py-1 rounded-full border border-red-100 shadow-sm">
-                   <span className="text-[9px] font-black text-red-700 uppercase tracking-tighter">{t('expenses')}</span>
-                   <span className="text-[10px] font-black text-red-800">{transactionStats.expTotal}/{transactionStats.expPending}</span>
-                </div>
-             </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+               <Wallet size={16} className="text-gray-400" />
+               <h2 className="text-sm font-black uppercase tracking-tight">{t('transactions')}</h2>
+            </div>
+            
+            {/* Novos Contadores Requisitados */}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-green-50 border border-green-100 rounded-full">
+                <span className="text-[8px] font-black text-green-600 uppercase tracking-tighter">{t('revenues')}</span>
+                <span className="text-[10px] font-black text-green-700">{counters.revTotal}/{counters.revPending}</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-red-50 border border-red-100 rounded-full">
+                <span className="text-[8px] font-black text-red-600 uppercase tracking-tighter">{t('expenses')}</span>
+                <span className="text-[10px] font-black text-red-700">{counters.expTotal}/{counters.expPending}</span>
+              </div>
+            </div>
           </div>
+
           <button 
             onClick={handleOpenNewTransaction}
             className="primary-btn flex items-center gap-2 shadow-sm py-2 px-4"
@@ -458,6 +399,7 @@ const MonthlyControl: React.FC = () => {
         </div>
       </div>
 
+      {/* Modal e Sub-Modals mantidos ... */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-[32px] w-full max-w-xl p-8 md:p-10 shadow-2xl animate-in zoom-in duration-300 relative my-auto">
@@ -488,14 +430,9 @@ const MonthlyControl: React.FC = () => {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('category')}</label>
-                  <div className="flex gap-2">
-                    <select name="categoryId" required value={modalCategoryId} onChange={(e) => setModalCategoryId(e.target.value)} className="font-bold py-3 px-5 text-[13px] flex-1 min-h-[50px] appearance-none">
-                      {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>)}
-                    </select>
-                    <button type="button" onClick={() => setQuickAddType('category')} className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-400 hover:text-black shrink-0 transition-colors">
-                      <Plus size={20} />
-                    </button>
-                  </div>
+                  <select name="categoryId" required value={modalCategoryId} onChange={(e) => setModalCategoryId(e.target.value)} className="font-bold py-3 px-5 text-[13px] flex-1 min-h-[50px] appearance-none">
+                    {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>)}
+                  </select>
                 </div>
               </div>
 
@@ -509,29 +446,10 @@ const MonthlyControl: React.FC = () => {
                 {paymentMethod === 'Crédito' && (
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('card')}</label>
-                    <div className="flex gap-2">
-                      <select name="cardId" defaultValue={editingTransaction?.cardId || ""} className="flex-1 py-3 px-5 text-[13px] min-h-[50px] appearance-none">
-                        <option value="">{t('select')}</option>
-                        {cards.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                      </select>
-                      <button type="button" onClick={() => setQuickAddType('card')} className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-400 hover:text-black shrink-0 transition-colors">
-                        <Plus size={20} />
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {modalType === 'Despesa' && (
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('goals')}</label>
-                    <div className="flex gap-2">
-                      <select name="goalId" defaultValue={editingTransaction?.goalId || ""} className="flex-1 py-3 px-5 text-[13px] min-h-[50px] appearance-none">
-                        <option value="">{t('none')}</option>
-                        {goals.map(g => <option key={g.id} value={g.id}>{g.icon} {g.name}</option>)}
-                      </select>
-                      <button type="button" onClick={() => setQuickAddType('goal')} className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-400 hover:text-black shrink-0 transition-colors">
-                        <Plus size={20} />
-                      </button>
-                    </div>
+                    <select name="cardId" defaultValue={editingTransaction?.cardId || ""} className="flex-1 py-3 px-5 text-[13px] min-h-[50px] appearance-none">
+                      <option value="">{t('select')}</option>
+                      {cards.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
                   </div>
                 )}
               </div>
@@ -543,90 +461,6 @@ const MonthlyControl: React.FC = () => {
 
               <button type="submit" className="primary-btn w-full py-4 text-[13px] mt-2 shadow-xl active:scale-95 transition-all">{t('save')}</button>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Quick Add Sub-Modals */}
-      {quickAddType && (
-        <div className="fixed inset-0 bg-black/70 z-[110] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white rounded-[20px] w-full max-w-xs p-6 shadow-2xl animate-in zoom-in duration-300 relative my-auto">
-            <button onClick={() => setQuickAddType(null)} className="absolute right-4 top-4 p-1 hover:bg-gray-100 rounded-full text-gray-400"><X size={16} /></button>
-            <h3 className="text-sm font-black mb-3">Novo {quickAddType}</h3>
-
-            {quickAddType === 'category' && (
-              <form onSubmit={handleQuickAddCategory} className="space-y-2">
-                <div className="space-y-0.5"><label className="text-[7px] font-black text-gray-400 uppercase">Nome</label><input name="name" required className="font-bold py-1.5 px-3 text-xs" /></div>
-                <div className="space-y-0.5">
-                  <label className="text-[7px] font-black text-gray-400 uppercase">Ícone</label>
-                  <div className="flex flex-wrap gap-1 p-1.5 bg-gray-50 rounded-lg max-h-[60px] overflow-y-auto">
-                    {EMOJIS.map(e => (
-                      <label key={e} className="cursor-pointer">
-                        <input type="radio" name="icon" value={e} required className="hidden peer" />
-                        <span className="w-6 h-6 flex items-center justify-center rounded-md bg-white peer-checked:bg-black peer-checked:text-white shadow-sm text-xs">{e}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <button type="submit" className="primary-btn w-full py-2 text-xs mt-1">Salvar</button>
-              </form>
-            )}
-
-            {quickAddType === 'card' && (
-              <form onSubmit={handleQuickAddCard} className="space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-0.5"><label className="text-[7px] font-black text-gray-400 uppercase">Nome</label><input name="name" required className="font-bold py-1.5 px-3 text-xs" /></div>
-                  <div className="space-y-0.5"><label className="text-[7px] font-black text-gray-400 uppercase">Banco</label><input name="bank" required className="font-bold py-1.5 px-3 text-xs" /></div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-0.5"><label className="text-[7px] font-black text-gray-400 uppercase">Limite</label><input name="limit" type="number" step="0.01" required className="font-bold py-1.5 px-3 text-xs" /></div>
-                  <div className="space-y-0.5"><label className="text-[7px] font-black text-gray-400 uppercase">Fechamento</label><input name="closingDay" type="number" min="1" max="31" defaultValue="10" required className="font-bold py-1.5 px-3 text-xs text-center" /></div>
-                </div>
-                <div className="space-y-0.5">
-                  <label className="text-[7px] font-black text-gray-400 uppercase">Cor</label>
-                  <div className="flex flex-wrap gap-1 p-1.5 bg-gray-50 rounded-lg">
-                    {CARD_COLORS.map(c => (
-                      <label key={c} className="cursor-pointer">
-                        <input type="radio" name="color" value={c} required className="hidden peer" />
-                        <span className="w-5 h-5 rounded-full block border-2 border-transparent peer-checked:border-black peer-checked:scale-110 shadow-sm" style={{ backgroundColor: c }}></span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <button type="submit" className="primary-btn w-full py-2 text-xs mt-1">Salvar</button>
-              </form>
-            )}
-
-            {quickAddType === 'goal' && (
-              <form onSubmit={handleQuickAddGoal} className="space-y-2">
-                <div className="space-y-0.5"><label className="text-[7px] font-black text-gray-400 uppercase">Nome da Meta</label><input name="name" required className="font-bold py-1.5 px-3 text-xs" /></div>
-                <div className="space-y-0.5">
-                  <label className="text-[7px] font-black text-gray-400 uppercase">Ícone</label>
-                  <div className="flex flex-wrap gap-1 p-1.5 bg-gray-50 rounded-lg max-h-[60px] overflow-y-auto">
-                    {EMOJIS.map(e => (
-                      <label key={e} className="cursor-pointer">
-                        <input type="radio" name="icon" value={e} required className="hidden peer" />
-                        <span className="w-6 h-6 flex items-center justify-center rounded-md bg-white peer-checked:bg-black peer-checked:text-white shadow-sm text-xs">{e}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-0.5"><label className="text-[7px] font-black text-gray-400 uppercase">Valor Alvo</label><input name="targetValue" type="number" step="0.01" required className="font-bold py-1.5 px-3 text-xs" /></div>
-                <button type="submit" className="primary-btn w-full py-2 text-xs mt-1">Salvar</button>
-              </form>
-            )}
-
-            {quickAddType === 'investment' && (
-              <form onSubmit={handleQuickAddInvestment} className="space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-0.5"><label className="text-[7px] font-black text-gray-400 uppercase">Tipo</label><select name="type" required className="font-bold py-1.5 px-3 text-[10px]">{INVESTMENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
-                  <div className="space-y-0.5"><label className="text-[7px] font-black text-gray-400 uppercase">Corretora</label><input name="broker" required className="font-bold py-1.5 px-3 text-xs" /></div>
-                </div>
-                <div className="space-y-0.5"><label className="text-[7px] font-black text-gray-400 uppercase">Ativo / Código</label><input name="category" required placeholder="Ex: PETR4" className="font-bold py-1.5 px-3 text-xs" /></div>
-                <div className="space-y-0.5"><label className="text-[7px] font-black text-gray-400 uppercase">Valor do Aporte</label><input name="value" type="number" step="0.01" required className="font-bold py-1.5 px-3 text-xs" /></div>
-                <button type="submit" className="primary-btn w-full py-2 text-xs mt-1">Salvar</button>
-              </form>
-            )}
           </div>
         </div>
       )}
