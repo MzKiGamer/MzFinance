@@ -7,7 +7,8 @@ import { Plus, Trash2, Pencil, X, Building2, TrendingUp } from 'lucide-react';
 import { Asset, Investment } from '../types';
 
 const Patrimony: React.FC = () => {
-  const { assets, investments, setAssets, deleteAsset, setInvestments, deleteInvestment } = useFinance();
+  // Fix: replace missing setters with save methods from FinanceContext to resolve type errors and ensure persistence
+  const { assets, investments, saveAsset, deleteAsset, saveInvestment, deleteInvestment } = useFinance();
   const { t, language } = useLanguage();
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [isAddingAsset, setIsAddingAsset] = useState(false);
@@ -30,6 +31,7 @@ const Patrimony: React.FC = () => {
         currency: language === 'pt' ? 'BRL' : 'USD' 
     }).format(val);
 
+  // Fix: Use saveAsset instead of setAssets to ensure data is updated in Supabase
   const handleSaveAsset = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -42,15 +44,12 @@ const Patrimony: React.FC = () => {
       liquidity: fd.get('liquidity') as any,
       canTouch: fd.get('canTouch') === 'on' ? 'Sim' : 'Não'
     };
-    if (editingAsset) {
-      setAssets(prev => prev.map(a => a.id === newAsset.id ? newAsset : a));
-    } else {
-      setAssets(prev => [...prev, newAsset]);
-    }
+    saveAsset(newAsset);
     setIsAddingAsset(false);
     setEditingAsset(null);
   };
 
+  // Fix: Use saveInvestment instead of setInvestments to ensure data is updated in Supabase
   const handleSaveInvestment = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -62,11 +61,7 @@ const Patrimony: React.FC = () => {
       value: Number(fd.get('value')),
       updatedAt: new Date().toLocaleDateString(language === 'pt' ? 'pt-BR' : 'en-US')
     };
-    if (editingInvestment) {
-      setInvestments(prev => prev.map(i => i.id === newInv.id ? newInv : i));
-    } else {
-      setInvestments(prev => [...prev, newInv]);
-    }
+    saveInvestment(newInv);
     setIsAddingInvestment(false);
     setEditingInvestment(null);
   };

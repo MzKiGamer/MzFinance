@@ -10,25 +10,26 @@ import { useAuth } from './AuthContext';
 
 interface FinanceContextType {
   categories: Category[];
-  setCategories: React.Dispatch<React.SetStateAction<Category[]>>;
+  saveCategory: (category: Category) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
   cards: Card[];
-  setCards: React.Dispatch<React.SetStateAction<Card[]>>;
+  saveCard: (card: Card) => Promise<void>;
   deleteCard: (id: string) => Promise<void>;
   goals: Goal[];
-  setGoals: React.Dispatch<React.SetStateAction<Goal[]>>;
+  saveGoal: (goal: Goal) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
   fixedEntries: FixedEntry[];
-  setFixedEntries: React.Dispatch<React.SetStateAction<FixedEntry[]>>;
+  saveFixedEntry: (fixed: FixedEntry) => Promise<void>;
   deleteFixedEntry: (id: string) => Promise<void>;
   transactions: Transaction[];
+  saveTransaction: (tx: Transaction) => Promise<void>;
   setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>;
   deleteTransaction: (id: string) => Promise<void>;
   assets: Asset[];
-  setAssets: React.Dispatch<React.SetStateAction<Asset[]>>;
+  saveAsset: (asset: Asset) => Promise<void>;
   deleteAsset: (id: string) => Promise<void>;
   investments: Investment[];
-  setInvestments: React.Dispatch<React.SetStateAction<Investment[]>>;
+  saveInvestment: (investment: Investment) => Promise<void>;
   deleteInvestment: (id: string) => Promise<void>;
   monthConfigs: MonthConfig[];
   updateMonthConfig: (config: MonthConfig) => void;
@@ -52,25 +53,22 @@ const mapToJS = (data: any[] | null) => {
   });
 };
 
-const mapToDB = (data: any[], userId: string) => {
-  return data.map(item => {
-    const newItem: any = {};
-    for (let key in item) {
-      newItem[camelToSnake(key)] = item[key];
-    }
-    newItem.user_id = userId;
-    if (!newItem.id && newItem.month_code) {
-      newItem.id = `mconf_${userId}_${newItem.month_code}`;
-    }
-    return newItem;
-  });
+const mapToDBItem = (item: any, userId: string) => {
+  const newItem: any = {};
+  for (let key in item) {
+    newItem[camelToSnake(key)] = item[key];
+  }
+  newItem.user_id = userId;
+  if (!newItem.id && newItem.month_code) {
+    newItem.id = `mconf_${userId}_${newItem.month_code}`;
+  }
+  return newItem;
 };
 
 export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [dataLoaded, setDataLoaded] = useState(false);
   const isInitialLoadDone = useRef(false);
 
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
@@ -82,24 +80,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [monthConfigs, setMonthConfigs] = useState<MonthConfig[]>([]);
 
-  const clearLocalStates = useCallback(() => {
-    setDataLoaded(false);
-    isInitialLoadDone.current = false;
-    setTransactions([]);
-    setCategories(DEFAULT_CATEGORIES);
-    setCards([]);
-    setGoals([]);
-    setFixedEntries([]);
-    setAssets([]);
-    setInvestments([]);
-    setMonthConfigs([]);
-  }, []);
-
   const fetchData = useCallback(async () => {
-    if (!currentUser || !supabase) {
-      setDataLoaded(true);
-      return;
-    }
+    if (!currentUser || !supabase) return;
     setIsLoading(true);
     try {
       const fetchTable = async (table: string) => {
@@ -126,11 +108,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setInvestments(mapToJS(invs));
       setMonthConfigs(mapToJS(mconfs));
       isInitialLoadDone.current = true;
-      setDataLoaded(true);
     } catch (err) {
-      console.error("Mz Finance: Erro ao carregar dados:", err);
-      isInitialLoadDone.current = true;
-      setDataLoaded(true);
+      console.error("Mz Finance Load Error:", err);
     } finally {
       setIsLoading(false);
     }
@@ -138,60 +117,67 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   useEffect(() => {
     if (currentUser) fetchData();
-    else clearLocalStates();
-  }, [currentUser, fetchData, clearLocalStates]);
+  }, [currentUser, fetchData]);
 
-  const syncWithSupabase = async (table: string, data: any[]) => {
-    if (!currentUser || !isInitialLoadDone.current || !supabase) return;
+  // Função genérica de salvamento (Direct Persistence)
+  const saveItem = async (table: string, item: any, setter: React.Dispatch<React.SetStateAction<any[]>>) => {
+    if (!currentUser || !supabase) return;
     setIsSyncing(true);
     try {
-      const dataToSync = mapToDB(data, currentUser.id);
-      if (dataToSync.length > 0) {
-        const { error } = await supabase.from(table).upsert(dataToSync, { onConflict: 'id' });
-        if (error) throw error;
-      }
+      const dbItem = mapToDBItem(item, currentUser.id);
+      const { error } = await supabase.from(table).upsert(dbItem, { onConflict: 'id' });
+      if (error) throw error;
+      
+      // Atualiza estado local apenas após sucesso no banco
+      setter(prev => {
+        const exists = prev.find(i => i.id === item.id);
+        if (exists) return prev.map(i => i.id === item.id ? item : i);
+        return [...prev, item];
+      });
     } catch (err) {
-      console.error(`Mz Finance: Erro ao sincronizar ${table}:`, err);
+      console.error(`Error saving to ${table}:`, err);
+      alert("Erro ao salvar dados. Verifique sua conexão.");
     } finally {
       setIsSyncing(false);
     }
   };
 
   const deleteItem = async (table: string, id: string, setter: React.Dispatch<React.SetStateAction<any[]>>) => {
-    setter(prev => prev.filter(item => item.id !== id));
-    if (currentUser && supabase) {
-      try {
-        const { error } = await supabase.from(table).delete().eq('id', id);
-        if (error) throw error;
-      } catch (err) {
-        console.error(`Erro ao deletar de ${table}:`, err);
-      }
+    if (!currentUser || !supabase) return;
+    setter(prev => prev.filter(i => i.id !== id));
+    try {
+      const { error } = await supabase.from(table).delete().eq('id', id);
+      if (error) throw error;
+    } catch (err) {
+      console.error(`Error deleting from ${table}:`, err);
     }
   };
 
+  const saveTransaction = (tx: Transaction) => saveItem('transactions', tx, setTransactions);
+  const saveCategory = (cat: Category) => saveItem('categories', cat, setCategories);
+  const saveCard = (card: Card) => saveItem('cards', card, setCards);
+  const saveGoal = (goal: Goal) => saveItem('goals', goal, setGoals);
+  const saveFixedEntry = (fixed: FixedEntry) => saveItem('fixed_entries', fixed, setFixedEntries);
+  const saveAsset = (asset: Asset) => saveItem('assets', asset, setAssets);
+  const saveInvestment = (inv: Investment) => saveItem('investments', inv, setInvestments);
+
   const deleteTransaction = (id: string) => deleteItem('transactions', id, setTransactions);
-  const deleteGoal = (id: string) => deleteItem('goals', id, setGoals);
   const deleteCategory = (id: string) => deleteItem('categories', id, setCategories);
   const deleteCard = (id: string) => deleteItem('cards', id, setCards);
+  const deleteGoal = (id: string) => deleteItem('goals', id, setGoals);
   const deleteFixedEntry = (id: string) => deleteItem('fixed_entries', id, setFixedEntries);
   const deleteAsset = (id: string) => deleteItem('assets', id, setAssets);
   const deleteInvestment = (id: string) => deleteItem('investments', id, setInvestments);
 
-  useEffect(() => { syncWithSupabase('transactions', transactions); }, [transactions]);
-  useEffect(() => { syncWithSupabase('categories', categories); }, [categories]);
-  useEffect(() => { syncWithSupabase('cards', cards); }, [cards]);
-  useEffect(() => { syncWithSupabase('goals', goals); }, [goals]);
-  useEffect(() => { syncWithSupabase('fixed_entries', fixedEntries); }, [fixedEntries]);
-  useEffect(() => { syncWithSupabase('assets', assets); }, [assets]);
-  useEffect(() => { syncWithSupabase('investments', investments); }, [investments]);
-  useEffect(() => { syncWithSupabase('month_configs', monthConfigs); }, [monthConfigs]);
-
-  const updateMonthConfig = (config: MonthConfig) => {
+  const updateMonthConfig = async (config: MonthConfig) => {
+    if (!currentUser || !supabase) return;
+    const dbItem = mapToDBItem(config, currentUser.id);
+    await supabase.from('month_configs').upsert(dbItem, { onConflict: 'id' });
     setMonthConfigs(prev => {
       const idx = prev.findIndex(c => c.monthCode === config.monthCode);
       if (idx >= 0) {
         const copy = [...prev];
-        copy[idx] = { ...prev[idx], ...config };
+        copy[idx] = config;
         return copy;
       }
       return [...prev, config];
@@ -200,13 +186,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   return (
     <FinanceContext.Provider value={{
-      categories, setCategories, deleteCategory,
-      cards, setCards, deleteCard,
-      goals, setGoals, deleteGoal,
-      fixedEntries, setFixedEntries, deleteFixedEntry,
-      transactions, setTransactions, deleteTransaction,
-      assets, setAssets, deleteAsset,
-      investments, setInvestments, deleteInvestment,
+      categories, saveCategory, deleteCategory,
+      cards, saveCard, deleteCard,
+      goals, saveGoal, deleteGoal,
+      fixedEntries, saveFixedEntry, deleteFixedEntry,
+      transactions, saveTransaction, setTransactions, deleteTransaction,
+      assets, saveAsset, deleteAsset,
+      investments, saveInvestment, deleteInvestment,
       monthConfigs, updateMonthConfig,
       isLoading, isSyncing
     }}>

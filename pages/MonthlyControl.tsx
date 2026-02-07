@@ -16,13 +16,14 @@ const EMOJIS = ['🛒', '⚠️', '📱', '🐶', '👚', '💅', '🎁', '💊'
 const CARD_COLORS = ['#222222', '#FF385C', '#6366f1', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
 
 const MonthlyControl: React.FC = () => {
+  // Fix: replace missing setters with save methods from FinanceContext to resolve type errors and ensure persistence
   const { 
-    transactions, setTransactions, 
+    transactions, saveTransaction, 
     deleteTransaction,
-    categories, setCategories,
-    cards, setCards,
-    goals, setGoals,
-    investments, setInvestments,
+    categories, saveCategory,
+    cards, saveCard,
+    goals, saveGoal,
+    investments, saveInvestment,
     monthConfigs, updateMonthConfig 
   } = useFinance();
   
@@ -86,12 +87,15 @@ const MonthlyControl: React.FC = () => {
     updateMonthConfig({ ...config, [key]: newVal, income: stats.res });
   };
 
+  // Fix: Use saveTransaction instead of setTransactions to ensure data is updated in Supabase
   const handleTogglePaid = (tx: Transaction) => {
     const newPaidStatus = !tx.paid;
     const today = new Date().toISOString().split('T')[0];
-    setTransactions(prev => prev.map(t => t.id === tx.id ? { 
-      ...t, paid: newPaidStatus, paymentDate: newPaidStatus ? today : undefined 
-    } : t));
+    saveTransaction({ 
+      ...tx, 
+      paid: newPaidStatus, 
+      paymentDate: newPaidStatus ? today : undefined 
+    });
   };
 
   const handleModalTypeChange = (type: TransactionType) => {
@@ -119,6 +123,7 @@ const MonthlyControl: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  // Fix: Use saveTransaction instead of setTransactions to ensure data is updated in Supabase
   const handleSaveTransaction = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -139,11 +144,11 @@ const MonthlyControl: React.FC = () => {
       paymentDate: isPaid ? (editingTransaction?.paymentDate || new Date().toISOString().split('T')[0]) : undefined,
       notes: fd.get('notes') as string || '',
     };
-    if (editingTransaction) setTransactions(prev => prev.map(t => t.id === nt.id ? nt : t));
-    else setTransactions(prev => [...prev, nt]);
+    saveTransaction(nt);
     setIsModalOpen(false);
   };
 
+  // Fix: Use saveCategory instead of setCategories to ensure data is updated in Supabase
   const handleQuickAddCategory = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -153,11 +158,12 @@ const MonthlyControl: React.FC = () => {
       icon: fd.get('icon') as string,
       subcategories: ''
     };
-    setCategories(prev => [...prev, newCat]);
+    saveCategory(newCat);
     setModalCategoryId(newCat.id);
     setQuickAddType(null);
   };
 
+  // Fix: Use saveCard instead of setCards to ensure data is updated in Supabase
   const handleQuickAddCard = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -169,10 +175,11 @@ const MonthlyControl: React.FC = () => {
       closingDay: Number(fd.get('closingDay')),
       color: fd.get('color') as string
     };
-    setCards(prev => [...prev, newCard]);
+    saveCard(newCard);
     setQuickAddType(null);
   };
 
+  // Fix: Use saveGoal instead of setGoals to ensure data is updated in Supabase
   const handleQuickAddGoal = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -183,10 +190,11 @@ const MonthlyControl: React.FC = () => {
       targetValue: Number(fd.get('targetValue')),
       savedValue: 0
     };
-    setGoals(prev => [...prev, newGoal]);
+    saveGoal(newGoal);
     setQuickAddType(null);
   };
 
+  // Fix: Use saveInvestment instead of setInvestments to ensure data is updated in Supabase
   const handleQuickAddInvestment = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -198,7 +206,7 @@ const MonthlyControl: React.FC = () => {
       updatedAt: new Date().toISOString().split('T')[0],
       category: fd.get('category') as string
     };
-    setInvestments(prev => [...prev, newInv]);
+    saveInvestment(newInv);
     setQuickAddType(null);
   };
 

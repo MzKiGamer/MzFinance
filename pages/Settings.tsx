@@ -12,9 +12,9 @@ const EMOJIS = ['🛒', '⚠️', '📱', '🐶', '👚', '💅', '🎁', '💊'
 
 const Settings: React.FC = () => {
   const { 
-    categories, setCategories, deleteCategory,
-    cards, setCards, deleteCard,
-    fixedEntries, setFixedEntries, deleteFixedEntry
+    categories, saveCategory, deleteCategory,
+    cards, saveCard, deleteCard,
+    fixedEntries, saveFixedEntry, deleteFixedEntry
   } = useFinance();
   const { currentUser } = useAuth();
   const { t, language } = useLanguage();
@@ -38,7 +38,7 @@ const Settings: React.FC = () => {
       currency: language === 'pt' ? 'BRL' : 'USD' 
     }).format(val);
 
-  const handleSaveCategory = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveCategory = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const newItem: Category = {
@@ -48,16 +48,12 @@ const Settings: React.FC = () => {
       subcategories: fd.get('subcategories') as string,
       isSystem: editingCategory?.isSystem
     };
-    if (editingCategory) {
-      setCategories(prev => prev.map(c => c.id === newItem.id ? newItem : c));
-    } else {
-      setCategories(prev => [...prev, newItem]);
-    }
+    await saveCategory(newItem);
     setIsAdding(false);
     setEditingCategory(null);
   };
 
-  const handleSaveCard = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveCard = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const newItem: Card = {
@@ -68,16 +64,12 @@ const Settings: React.FC = () => {
       closingDay: Number(fd.get('closingDay')),
       color: selectedCardColor
     };
-    if (editingCard) {
-      setCards(prev => prev.map(c => c.id === newItem.id ? newItem : c));
-    } else {
-      setCards(prev => [...prev, newItem]);
-    }
+    await saveCard(newItem);
     setIsAdding(false);
     setEditingCard(null);
   };
 
-  const handleSaveFixed = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveFixed = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const newItem: FixedEntry = {
@@ -91,11 +83,7 @@ const Settings: React.FC = () => {
       notes: '',
       active: true
     };
-    if (editingFixed) {
-      setFixedEntries(prev => prev.map(f => f.id === newItem.id ? newItem : f));
-    } else {
-      setFixedEntries(prev => [...prev, newItem]);
-    }
+    await saveFixedEntry(newItem);
     setIsAdding(false);
     setEditingFixed(null);
   };
@@ -120,7 +108,7 @@ const Settings: React.FC = () => {
     } else {
       setEditingFixed(null);
       setFixedType('Despesa');
-      setFixedCategoryId(categories[0]?.id || '');
+      setFixedCategoryId(categories.find(c => !c.isSystem)?.id || categories[0]?.id || '');
     }
     setIsAdding(true);
   };

@@ -8,7 +8,8 @@ import { Goal } from '../types';
 const SYMBOLS = ['🎯', '✈️', '🚗', '🏠', '💍', '💻', '🎓', '🏥', '🏄', '🚀', '💰', '👶', '🚴', '🎸', '🕹️', '🎨', '🌴', '🛳️', '🏔️', '⛺', '🍔', '🥂', '🎁', '🎈'];
 
 const Goals: React.FC = () => {
-  const { goals, setGoals, deleteGoal, transactions } = useFinance();
+  // Fix: replace missing setGoals with saveGoal from FinanceContext to resolve type error and ensure persistence
+  const { goals, saveGoal, deleteGoal, transactions } = useFinance();
   const { t, language } = useLanguage();
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -38,6 +39,7 @@ const Goals: React.FC = () => {
     setIsAdding(true);
   };
 
+  // Fix: Use saveGoal instead of setGoals to ensure data is updated in Supabase
   const handleSaveGoal = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -48,11 +50,7 @@ const Goals: React.FC = () => {
       targetValue: Number(fd.get('targetValue')),
       savedValue: Number(fd.get('savedValue'))
     };
-    if (editingGoal) {
-      setGoals(prev => prev.map(g => g.id === ng.id ? ng : g));
-    } else {
-      setGoals(prev => [...prev, ng]);
-    }
+    saveGoal(ng);
     setIsAdding(false);
     setEditingGoal(null);
   };
