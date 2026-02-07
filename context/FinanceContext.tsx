@@ -99,8 +99,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         fetchTable('investments'),
         fetchTable('month_configs'),
       ]);
+
       setTransactions(mapToJS(txs));
-      setCategories(cats.length ? mapToJS(cats) : DEFAULT_CATEGORIES);
+      
+      // Lógica de Mesclagem de Categorias: Garante que as categorias do sistema (DEFAULT_CATEGORIES)
+      // sempre existam, mesmo que não estejam no banco de dados.
+      const fetchedCats = mapToJS(cats);
+      const combinedCats = [...DEFAULT_CATEGORIES];
+      fetchedCats.forEach(fc => {
+        if (!combinedCats.find(c => c.id === fc.id)) {
+          combinedCats.push(fc);
+        }
+      });
+      setCategories(combinedCats);
+
       setCards(mapToJS(crds));
       setGoals(mapToJS(gls));
       setFixedEntries(mapToJS(fixed));
@@ -119,7 +131,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (currentUser) fetchData();
   }, [currentUser, fetchData]);
 
-  // Função genérica de salvamento (Direct Persistence)
   const saveItem = async (table: string, item: any, setter: React.Dispatch<React.SetStateAction<any[]>>) => {
     if (!currentUser || !supabase) return;
     setIsSyncing(true);
@@ -128,7 +139,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const { error } = await supabase.from(table).upsert(dbItem, { onConflict: 'id' });
       if (error) throw error;
       
-      // Atualiza estado local apenas após sucesso no banco
       setter(prev => {
         const exists = prev.find(i => i.id === item.id);
         if (exists) return prev.map(i => i.id === item.id ? item : i);
