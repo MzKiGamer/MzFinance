@@ -54,10 +54,12 @@ const mapToJS = (data: any[] | null) => {
   });
 };
 
-const mapToDBItem = (item: any, userId: string) => {
+const mapToDBItem = (item: any, userId: string, table: string) => {
   const newItem: any = {};
   for (let key in item) {
     const snakeKey = camelToSnake(key);
+    // Remove campo 'notes' se estivermos salvando em 'fixed_entries' para evitar erro de coluna inexistente no Supabase
+    if (table === 'fixed_entries' && snakeKey === 'notes') continue;
     newItem[snakeKey] = item[key];
   }
   newItem.user_id = userId;
@@ -68,6 +70,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const { currentUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const isAppliedRef = useRef<Set<string>>(new Set());
   
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
   const [cards, setCards] = useState<Card[]>([]);
@@ -98,7 +101,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         fetchTable('month_configs'),
       ]);
 
-      setTransactions(mapToJS(txs));
+      const mappedTxs = mapToJS(txs);
+      setTransactions(mappedTxs);
       
       const fetchedCats = mapToJS(cats);
       const combinedCats = [...DEFAULT_CATEGORIES];
@@ -121,18 +125,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [currentUser]);
 
   useEffect(() => {
-    if (currentUser) fetchData();
+    if (currentUser) {
+      fetchData();
+      isAppliedRef.current.clear();
+    }
   }, [currentUser, fetchData]);
 
   const saveItem = async (table: string, item: any, setter: React.Dispatch<React.SetStateAction<any[]>>) => {
     if (!currentUser || !supabase) return;
     setIsSyncing(true);
     try {
-      const dbItem = mapToDBItem(item, currentUser.id);
-      const { error, data } = await supabase.from(table).upsert(dbItem, { onConflict: 'id' }).select();
+      const dbItem = mapToDBItem(item, currentUser.id, table);
+      const { error } = await supabase.from(table).upsert(dbItem, { onConflict: 'id' });
       
       if (error) {
-        console.error(`Erro detalhado Supabase (${table}):`, error.message, error.details, error.hint);
         throw error;
       }
       
@@ -143,7 +149,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
     } catch (err: any) {
       console.error(`Error saving to ${table}:`, err);
-      alert(`Falha ao salvar: ${err.message || "Verifique os logs do console"}`);
+      alert(`Falha ao salvar: ${err.message || "Erro desconhecido"}`);
     } finally {
       setIsSyncing(false);
     }
@@ -161,17 +167,21 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const applyFixedEntries = async (monthCode: string) => {
-    if (!currentUser || !supabase || fixedEntries.length === 0) return;
+    if (!currentUser || !supabase || fixedEntries.length === 0 || isLoading) return;
     
-    // Verifica se já existem transações fixas aplicadas para este mês
+    // Evita loop infinito e múltiplas aplicações no mesmo mês durante a sessão
+    if (isAppliedRef.current.has(monthCode)) return;
+
     const hasFixedApplied = transactions.some(tx => tx.monthCode === monthCode && tx.isFixed);
-    if (hasFixedApplied) return;
+    if (hasFixedApplied) {
+      isAppliedRef.current.add(monthCode);
+      return;
+    }
 
     setIsSyncing(true);
-    const newTxs: Transaction[] = [];
-
-    fixedEntries.filter(f => f.active).forEach(fixed => {
-      newTxs.push({
+    const newTxs: Transaction[] = fixedEntries
+      .filter(f => f.active)
+      .map(fixed => ({
         id: crypto.randomUUID(),
         monthCode: monthCode,
         description: fixed.description,
@@ -182,16 +192,16 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         paymentMethod: fixed.paymentMethod,
         paid: false,
         isFixed: true,
-        notes: fixed.notes || ''
-      });
-    });
+        notes: ''
+      }));
 
     if (newTxs.length > 0) {
       try {
-        const dbItems = newTxs.map(tx => mapToDBItem(tx, currentUser.id));
+        const dbItems = newTxs.map(tx => mapToDBItem(tx, currentUser.id, 'transactions'));
         const { error } = await supabase.from('transactions').insert(dbItems);
         if (error) throw error;
         setTransactions(prev => [...prev, ...newTxs]);
+        isAppliedRef.current.add(monthCode);
       } catch (err) {
         console.error("Erro ao aplicar gastos fixos:", err);
       } finally {
@@ -222,7 +232,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ...config,
       id: config.id || `mconf_${currentUser.id}_${config.monthCode}`
     };
-    const dbItem = mapToDBItem(configToSave, currentUser.id);
+    const dbItem = mapToDBItem(configToSave, currentUser.id, 'month_configs');
     await supabase.from('month_configs').upsert(dbItem, { onConflict: 'id' });
     setMonthConfigs(prev => {
       const idx = prev.findIndex(c => c.monthCode === config.monthCode);
