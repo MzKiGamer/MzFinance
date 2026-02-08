@@ -1,15 +1,15 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useFinance } from '../context/FinanceContext';
-import { PAYMENT_METHODS, INVESTMENT_TYPES } from '../constants';
+import { PAYMENT_METHODS } from '../constants';
 import { useLanguage } from '../context/LanguageContext';
 import { 
   Plus, Trash2, Pencil, ChevronLeft, ChevronRight, ChevronDown, 
   CheckCircle2, X, Calendar as CalendarIcon, Info, Target, 
   Wallet, ArrowUpCircle, ArrowDownCircle, Banknote, Landmark,
-  TrendingUp, Tag as TagIcon, Repeat
+  Tag as TagIcon, Repeat, CreditCard
 } from 'lucide-react';
-import { Transaction, TransactionType, Category, Card, Goal, MonthConfig, Investment } from '../types';
+import { Transaction, TransactionType, Category, Card, Goal, MonthConfig } from '../types';
 
 const MONTH_CODES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 const EMOJIS = ['🛒', '⚠️', '📱', '🐶', '👚', '💅', '🎁', '💊', '🤷', '🧠', '🚗', '🍽️', '🏖️', '🏠', '🧾', '📈', '🎓', '🤝', '💼', '💸', '🔁', '🚖', '🍕', '🍷', '🎮', '✈️', '🏋️', '📽️'];
@@ -22,7 +22,6 @@ const MonthlyControl: React.FC = () => {
     categories, saveCategory,
     cards, saveCard,
     goals, saveGoal,
-    investments, saveInvestment,
     monthConfigs, updateMonthConfig,
     applyFixedEntries,
     isLoading,
@@ -42,10 +41,11 @@ const MonthlyControl: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState('Dinheiro');
   const [modalType, setModalType] = useState<TransactionType>('Despesa');
   const [modalCategoryId, setModalCategoryId] = useState('');
+  const [modalGoalId, setModalGoalId] = useState('');
+  const [modalCardId, setModalCardId] = useState('');
   
-  const [quickAddType, setQuickAddType] = useState<'category' | 'card' | 'goal' | 'investment' | null>(null);
+  const [quickAddType, setQuickAddType] = useState<'category' | 'card' | 'goal' | null>(null);
 
-  // Efeito para aplicar gastos fixos automaticamente ao abrir um mês
   useEffect(() => {
     if (!isLoading && !isSyncing) {
        applyFixedEntries(currentMonthCode);
@@ -62,7 +62,6 @@ const MonthlyControl: React.FC = () => {
     return { res, exp, balance: res - exp };
   }, [monthTransactions]);
 
-  // Cálculo para os contadores visuais
   const counters = useMemo(() => {
     const revs = monthTransactions.filter(t => t.type === 'Receita');
     const exps = monthTransactions.filter(t => t.type === 'Despesa');
@@ -81,16 +80,10 @@ const MonthlyControl: React.FC = () => {
       monthCode: currentMonthCode, 
       income: stats.res, 
       needsPercent: 50, 
-      desiresPercent: 20, // Atualizado para 20%
-      savingsPercent: 30  // Atualizado para 30%
+      desiresPercent: 20,
+      savingsPercent: 30
     };
   }, [monthConfigs, currentMonthCode, stats.res]);
-
-  useEffect(() => {
-    if (!isLoading && config.income !== stats.res) {
-      updateMonthConfig({ ...config, income: stats.res });
-    }
-  }, [stats.res, config.income, isLoading, updateMonthConfig, config]);
 
   const formatCurrency = (val: number) => 
     new Intl.NumberFormat(language === 'pt' ? 'pt-BR' : 'en-US', { 
@@ -104,7 +97,6 @@ const MonthlyControl: React.FC = () => {
                    (key === 'savingsPercent' ? 0 : config.savingsPercent);
     let newVal = Math.max(0, val);
     if (others + newVal > 100) newVal = 100 - others;
-    
     updateMonthConfig({ ...config, [key]: newVal, income: stats.res });
   };
 
@@ -124,14 +116,10 @@ const MonthlyControl: React.FC = () => {
       const revenueCat = categories.find(c => c.isSystem && (c.name === 'Receita' || c.name === 'Revenue')) || 
                          categories.find(c => c.name.toLowerCase().includes('receita')) ||
                          categories.find(c => c.name.toLowerCase().includes('revenue'));
-      if (revenueCat) {
-        setModalCategoryId(revenueCat.id);
-      }
+      if (revenueCat) setModalCategoryId(revenueCat.id);
     } else {
       const currentCat = categories.find(c => c.id === modalCategoryId);
-      if (currentCat?.isSystem) {
-        setModalCategoryId(categories.find(c => !c.isSystem)?.id || categories[0]?.id || '');
-      }
+      if (currentCat?.isSystem) setModalCategoryId(categories.find(c => !c.isSystem)?.id || categories[0]?.id || '');
     }
   };
 
@@ -140,6 +128,8 @@ const MonthlyControl: React.FC = () => {
     setPaymentMethod('Dinheiro');
     setModalType('Despesa');
     setModalCategoryId(categories.find(c => !c.isSystem)?.id || categories[0]?.id || '');
+    setModalGoalId('');
+    setModalCardId('');
     setIsModalOpen(true);
   };
 
@@ -156,9 +146,8 @@ const MonthlyControl: React.FC = () => {
       value: Number(fd.get('value')),
       categoryId: modalCategoryId,
       paymentMethod: paymentMethod,
-      cardId: fd.get('cardId') as string || undefined,
-      goalId: fd.get('goalId') as string || undefined,
-      investmentId: fd.get('investmentId') as string || undefined,
+      cardId: paymentMethod === 'Crédito' ? modalCardId : undefined,
+      goalId: modalGoalId || undefined,
       paid: isPaid,
       paymentDate: isPaid ? (editingTransaction?.paymentDate || new Date().toISOString().split('T')[0]) : undefined,
       notes: fd.get('notes') as string || '',
@@ -167,7 +156,51 @@ const MonthlyControl: React.FC = () => {
     setIsModalOpen(false);
   };
 
-  const totalAllocated = config.needsPercent + config.desiresPercent + config.savingsPercent;
+  // Funções para Quick Add
+  const handleQuickAddCategory = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const id = crypto.randomUUID();
+    saveCategory({
+      id,
+      name: fd.get('name') as string,
+      icon: fd.get('icon') as string,
+      subcategories: ''
+    });
+    setModalCategoryId(id);
+    setQuickAddType(null);
+  };
+
+  const handleQuickAddCard = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const id = crypto.randomUUID();
+    saveCard({
+      id,
+      name: fd.get('name') as string,
+      bank: fd.get('bank') as string,
+      limit: Number(fd.get('limit')),
+      closingDay: Number(fd.get('closingDay')),
+      color: fd.get('color') as string
+    });
+    setModalCardId(id);
+    setQuickAddType(null);
+  };
+
+  const handleQuickAddGoal = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const id = crypto.randomUUID();
+    saveGoal({
+      id,
+      name: fd.get('name') as string,
+      icon: fd.get('icon') as string,
+      targetValue: Number(fd.get('targetValue')),
+      savedValue: 0
+    });
+    setModalGoalId(id);
+    setQuickAddType(null);
+  };
 
   return (
     <div className="max-w-[1400px] mx-auto space-y-4 md:space-y-6 pb-24 lg:pb-12 px-1">
@@ -189,7 +222,6 @@ const MonthlyControl: React.FC = () => {
           <span className="min-w-[120px] text-center tracking-tight uppercase">{MONTH_NAMES[selMonthIdx]}</span>
           <button onClick={() => setSelMonthIdx(prev => Math.min(11, prev + 1))} className="p-1.5 hover:text-[#FF385C] transition-colors"><ChevronRight size={20} /></button>
         </div>
-        
         <div className="hidden md:block w-32" />
       </div>
 
@@ -232,8 +264,8 @@ const MonthlyControl: React.FC = () => {
                   < Landmark size={14} className="text-green-600" />
                   <span className="text-xl font-black text-gray-800 tracking-tighter">{formatCurrency(stats.res)}</span>
                 </div>
-                <div className={`mt-0.5 inline-block w-fit px-1.5 py-0.5 rounded-full border text-[6px] font-black uppercase tracking-widest ${totalAllocated === 100 ? 'bg-green-100 border-green-200 text-green-700' : 'bg-amber-100 border-amber-200 text-amber-700'}`}>
-                  {totalAllocated}% ALOCADO
+                <div className={`mt-0.5 inline-block w-fit px-1.5 py-0.5 rounded-full border text-[6px] font-black uppercase tracking-widest ${config.needsPercent + config.desiresPercent + config.savingsPercent === 100 ? 'bg-green-100 border-green-200 text-green-700' : 'bg-amber-100 border-amber-200 text-amber-700'}`}>
+                  {config.needsPercent + config.desiresPercent + config.savingsPercent}% ALOCADO
                 </div>
               </div>
               <div className="hidden lg:block w-[1px] h-10 bg-gray-100" />
@@ -241,52 +273,22 @@ const MonthlyControl: React.FC = () => {
                 <div className="space-y-1">
                   <label className="text-[7px] font-black uppercase text-gray-400 block tracking-widest">{t('needs').toUpperCase()} (%)</label>
                   <div className="flex items-center gap-1">
-                    <div className="bg-[#F9F9F9] border border-[#F0F0F0] rounded-lg px-2 py-1 shadow-sm w-[60px] shrink-0 min-h-[38px] flex items-center justify-center">
-                      <input 
-                        type="number" 
-                        min="0" max="100"
-                        value={config.needsPercent} 
-                        onChange={(e) => handleUpdateConfig('needsPercent', Number(e.target.value))}
-                        className="bg-transparent border-none p-0 text-[10px] font-black w-full text-center focus:ring-0"
-                      />
-                    </div>
-                    <div className="bg-white border border-[#F0F0F0] rounded-lg px-2.5 py-1 font-black text-green-600 text-[15px] shadow-sm truncate flex items-center flex-1 min-h-[38px] tracking-tighter">
-                      {formatCurrency(stats.res * (config.needsPercent / 100))}
-                    </div>
+                    <input type="number" value={config.needsPercent} onChange={(e) => handleUpdateConfig('needsPercent', Number(e.target.value))} className="bg-[#F9F9F9] border border-[#F0F0F0] rounded-lg px-2 py-1 text-[10px] font-black w-[60px] text-center" />
+                    <div className="bg-white border border-[#F0F0F0] rounded-lg px-2.5 py-1 font-black text-green-600 text-[15px] flex-1">{formatCurrency(stats.res * (config.needsPercent / 100))}</div>
                   </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[7px] font-black uppercase text-gray-400 block tracking-widest">{t('savings').toUpperCase()} (%)</label>
                   <div className="flex items-center gap-1">
-                    <div className="bg-[#F9F9F9] border border-[#F0F0F0] rounded-lg px-2 py-1 shadow-sm w-[60px] shrink-0 min-h-[38px] flex items-center justify-center">
-                      <input 
-                        type="number" 
-                        min="0" max="100"
-                        value={config.savingsPercent} 
-                        onChange={(e) => handleUpdateConfig('savingsPercent', Number(e.target.value))}
-                        className="bg-transparent border-none p-0 text-[10px] font-black w-full text-center focus:ring-0"
-                      />
-                    </div>
-                    <div className="bg-white border border-[#F0F0F0] rounded-lg px-2.5 py-1 font-black text-green-600 text-[15px] shadow-sm truncate flex items-center flex-1 min-h-[38px] tracking-tighter">
-                      {formatCurrency(stats.res * (config.savingsPercent / 100))}
-                    </div>
+                    <input type="number" value={config.savingsPercent} onChange={(e) => handleUpdateConfig('savingsPercent', Number(e.target.value))} className="bg-[#F9F9F9] border border-[#F0F0F0] rounded-lg px-2 py-1 text-[10px] font-black w-[60px] text-center" />
+                    <div className="bg-white border border-[#F0F0F0] rounded-lg px-2.5 py-1 font-black text-green-600 text-[15px] flex-1">{formatCurrency(stats.res * (config.savingsPercent / 100))}</div>
                   </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[7px] font-black uppercase text-gray-400 block tracking-widest">{t('wants').toUpperCase()} (%)</label>
                   <div className="flex items-center gap-1">
-                    <div className="bg-[#F9F9F9] border border-[#F0F0F0] rounded-lg px-2 py-1 shadow-sm w-[60px] shrink-0 min-h-[38px] flex items-center justify-center">
-                      <input 
-                        type="number" 
-                        min="0" max="100"
-                        value={config.desiresPercent} 
-                        onChange={(e) => handleUpdateConfig('desiresPercent', Number(e.target.value))}
-                        className="bg-transparent border-none p-0 text-[10px] font-black w-full text-center focus:ring-0"
-                      />
-                    </div>
-                    <div className="bg-white border border-[#F0F0F0] rounded-lg px-2.5 py-1 font-black text-green-600 text-[15px] shadow-sm truncate flex items-center flex-1 min-h-[38px] tracking-tighter">
-                      {formatCurrency(stats.res * (config.desiresPercent / 100))}
-                    </div>
+                    <input type="number" value={config.desiresPercent} onChange={(e) => handleUpdateConfig('desiresPercent', Number(e.target.value))} className="bg-[#F9F9F9] border border-[#F0F0F0] rounded-lg px-2 py-1 text-[10px] font-black w-[60px] text-center" />
+                    <div className="bg-white border border-[#F0F0F0] rounded-lg px-2.5 py-1 font-black text-green-600 text-[15px] flex-1">{formatCurrency(stats.res * (config.desiresPercent / 100))}</div>
                   </div>
                 </div>
               </div>
@@ -299,107 +301,70 @@ const MonthlyControl: React.FC = () => {
       <div className="space-y-3">
         <div className="flex items-center justify-between ml-1">
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-               <Wallet size={16} className="text-gray-400" />
-               <h2 className="text-sm font-black uppercase tracking-tight">{t('transactions')}</h2>
-            </div>
-            
-            {/* Novos Contadores Requisitados */}
+            <h2 className="text-sm font-black uppercase tracking-tight">{t('transactions')}</h2>
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1.5 px-3 py-1 bg-green-50 border border-green-100 rounded-full">
-                <span className="text-[8px] font-black text-green-600 uppercase tracking-tighter">{t('revenues')}</span>
-                <span className="text-[10px] font-black text-green-700">{counters.revTotal}/{counters.revPending}</span>
+                <span className="text-[8px] font-black text-green-600">{t('revenues')} {counters.revTotal}/{counters.revPending}</span>
               </div>
               <div className="flex items-center gap-1.5 px-3 py-1 bg-red-50 border border-red-100 rounded-full">
-                <span className="text-[8px] font-black text-red-600 uppercase tracking-tighter">{t('expenses')}</span>
-                <span className="text-[10px] font-black text-red-700">{counters.expTotal}/{counters.expPending}</span>
+                <span className="text-[8px] font-black text-red-600">{t('expenses')} {counters.expTotal}/{counters.expPending}</span>
               </div>
             </div>
           </div>
-
-          <button 
-            onClick={handleOpenNewTransaction}
-            className="primary-btn flex items-center gap-2 shadow-sm py-2 px-4"
-          >
-            <Plus size={16} /> <span className="text-[10px] uppercase tracking-tight">{t('newTransaction')}</span>
+          <button onClick={handleOpenNewTransaction} className="primary-btn flex items-center gap-2 shadow-sm py-2 px-4">
+            <Plus size={16} /> <span className="text-[10px] uppercase">{t('newTransaction')}</span>
           </button>
         </div>
 
         <div className="flex flex-col gap-2">
-          {monthTransactions.map(tx => {
-            const category = categories.find(c => c.id === tx.categoryId);
-            const goal = goals.find(g => g.id === tx.goalId);
-            
-            return (
-              <div key={tx.id} className={`airbnb-card px-4 py-4 border-l-[3px] transition-all grid grid-cols-1 md:grid-cols-12 items-center gap-3 ${tx.paid ? 'bg-white opacity-95 shadow-sm' : 'bg-white shadow-md'} ${tx.type === 'Receita' ? 'border-l-green-500' : 'border-l-red-500'}`}>
-                
-                <div className="md:col-span-4 flex items-center gap-4 min-w-0">
+          {monthTransactions.map(tx => (
+            <div key={tx.id} className={`airbnb-card px-4 py-4 border-l-[3px] grid grid-cols-1 md:grid-cols-12 items-center gap-3 ${tx.type === 'Receita' ? 'border-l-green-500' : 'border-l-red-500'}`}>
+              <div className="md:col-span-4 flex items-center gap-4">
+                <button onClick={() => handleTogglePaid(tx)} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${tx.paid ? 'bg-green-100 text-green-600 border-2 border-green-200' : 'bg-gray-50 text-gray-200 border-2 border-dashed border-gray-100'}`}><CheckCircle2 size={20} /></button>
+                <h4 className="font-extrabold text-[17px] text-gray-800 truncate flex items-center gap-2">{tx.description} {tx.isFixed && <Repeat size={12} className="text-gray-300" />}</h4>
+              </div>
+              <div className="md:col-span-5 flex flex-wrap items-center gap-3 justify-center">
+                <div className="flex items-center gap-2 text-[13px] font-black text-gray-500 bg-gray-50 px-3 py-1 rounded-full"><CalendarIcon size={14} /> {tx.paymentDate || `Dia ${tx.day}`}</div>
+                {categories.find(c => c.id === tx.categoryId) && (
+                  <div className="flex items-center gap-2 text-[13px] font-black uppercase text-gray-500 bg-gray-50 px-3 py-1 rounded-full"><TagIcon size={14} /> {categories.find(c => c.id === tx.categoryId)?.name}</div>
+                )}
+                {goals.find(g => g.id === tx.goalId) && (
+                  <div className="flex items-center gap-2 text-[13px] font-black uppercase text-blue-500 bg-blue-50 px-3 py-1 rounded-full"><Target size={14} /> {goals.find(g => g.id === tx.goalId)?.name}</div>
+                )}
+              </div>
+              <div className="md:col-span-3 flex items-center justify-end gap-2 md:gap-4">
+                <span className={`text-[15px] font-black tracking-tight ${tx.type === 'Receita' ? 'text-green-600' : 'text-red-600'}`}>{tx.type === 'Receita' ? '+' : '-'} {formatCurrency(tx.value)}</span>
+                <div className="flex items-center gap-0 md:gap-1">
                   <button 
-                    onClick={() => handleTogglePaid(tx)}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shrink-0 ${tx.paid ? 'bg-green-100 text-green-600 border-2 border-green-200' : 'bg-gray-50 text-gray-200 border-2 border-dashed border-gray-100'}`}
+                    onClick={() => { 
+                      setEditingTransaction(tx); 
+                      setModalType(tx.type); 
+                      setPaymentMethod(tx.paymentMethod); 
+                      setModalCategoryId(tx.categoryId); 
+                      setModalGoalId(tx.goalId || ''); 
+                      setModalCardId(tx.cardId || ''); 
+                      setIsModalOpen(true); 
+                    }} 
+                    className="p-3 text-gray-400 hover:text-black transition-all"
+                    title={t('edit')}
                   >
-                    <CheckCircle2 size={20} />
+                    <Pencil size={20} />
                   </button>
-                  <div className="truncate">
-                    <h4 className="font-extrabold text-[17px] text-gray-800 truncate leading-tight tracking-tight flex items-center gap-2">
-                      {tx.description}
-                      {tx.isFixed && <Repeat size={12} className="text-gray-300" />}
-                    </h4>
-                  </div>
-                </div>
-
-                <div className="md:col-span-5 flex flex-wrap items-center justify-center gap-3">
-                  <div className="flex items-center gap-2 text-[15px] font-black text-green-600 bg-green-50/60 px-4 py-1.5 rounded-full border border-green-100">
-                    <CalendarIcon size={16} className="shrink-0" />
-                    <span>{tx.paymentDate || `Dia ${tx.day}`}</span>
-                  </div>
-
-                  {category && (
-                    <div className="flex items-center gap-2 text-[15px] font-black uppercase text-gray-500 bg-gray-50 px-4 py-1.5 rounded-full border border-gray-100">
-                      <TagIcon size={16} className="text-gray-400 shrink-0" />
-                      <span className="flex items-center gap-2">{category.icon} {category.name}</span>
-                    </div>
-                  )}
-
-                  {goal && (
-                    <div className="flex items-center gap-2 text-[15px] font-black uppercase text-blue-500 bg-blue-50 px-4 py-1.5 rounded-full border border-blue-100">
-                      <span>{goal.icon} {goal.name}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="md:col-span-3 flex items-center justify-end gap-6">
-                  <span className={`text-[15px] font-black whitespace-nowrap tracking-tight ${tx.type === 'Receita' ? 'text-green-600' : 'text-red-600'}`}>
-                    {tx.type === 'Receita' ? '+' : '-'} {formatCurrency(tx.value)}
-                  </span>
-                  
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 md:opacity-100 transition-opacity">
-                    <button 
-                      onClick={() => { setEditingTransaction(tx); setIsModalOpen(true); }} 
-                      className="p-2 text-gray-300 hover:text-black transition-all rounded-lg hover:bg-gray-50"
-                    >
-                      <Pencil size={20} />
-                    </button>
-                    <button 
-                      onClick={() => deleteTransaction(tx.id)} 
-                      className="p-2 text-gray-300 hover:text-red-500 transition-all rounded-lg hover:bg-gray-50"
-                    >
-                      <Trash2 size={20} />
-                    </button>
-                  </div>
+                  <button 
+                    onClick={() => deleteTransaction(tx.id)} 
+                    className="p-3 text-gray-400 hover:text-red-500 transition-all"
+                    title={t('delete')}
+                  >
+                    <Trash2 size={20} />
+                  </button>
                 </div>
               </div>
-            );
-          })}
-          {monthTransactions.length === 0 && (
-            <div className="py-12 text-center flex flex-col items-center gap-1.5 bg-gray-50/50 rounded-[20px] border-2 border-dashed border-gray-100">
-              <Info size={24} className="text-gray-100" />
-              <p className="text-gray-300 font-bold italic text-[10px]">{t('emptyTransactions')}</p>
             </div>
-          )}
+          ))}
         </div>
       </div>
 
+      {/* Main Transaction Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-[32px] w-full max-w-xl p-8 md:p-10 shadow-2xl animate-in zoom-in duration-300 relative my-auto">
@@ -407,7 +372,7 @@ const MonthlyControl: React.FC = () => {
             <h2 className="text-[19px] font-black mb-6 tracking-tight">{editingTransaction ? t('editTransaction') : t('newTransaction')}</h2>
             
             <form onSubmit={handleSaveTransaction} className="space-y-6">
-              <div className="flex bg-gray-100 p-1 rounded-xl mb-4">
+              <div className="flex bg-gray-100 p-1 rounded-xl">
                 <button type="button" onClick={() => handleModalTypeChange('Despesa')} className={`flex-1 py-3 text-[11px] font-black rounded-lg transition-all ${modalType === 'Despesa' ? 'bg-white shadow-sm text-red-500' : 'text-gray-400 hover:text-gray-600'}`}>{t('expenses')}</button>
                 <button type="button" onClick={() => handleModalTypeChange('Receita')} className={`flex-1 py-3 text-[11px] font-black rounded-lg transition-all ${modalType === 'Receita' ? 'bg-white shadow-sm text-green-600' : 'text-gray-400 hover:text-gray-600'}`}>{t('revenues')}</button>
               </div>
@@ -415,22 +380,25 @@ const MonthlyControl: React.FC = () => {
               <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-2 space-y-1.5">
                   <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('description')}</label>
-                  <input name="description" required defaultValue={editingTransaction?.description || ""} className="font-bold py-3 px-5 text-[13px] min-h-[50px]" />
+                  <input name="description" required defaultValue={editingTransaction?.description || ""} className="font-bold py-3 px-5 text-[13px]" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('day')}</label>
-                  <input name="day" type="number" min="1" max="31" required defaultValue={editingTransaction?.day || now.getDate()} className="font-bold py-3 px-5 text-[13px] text-center min-h-[50px]" />
+                  <input name="day" type="number" min="1" max="31" required defaultValue={editingTransaction?.day || now.getDate()} className="font-bold py-3 px-5 text-[13px] text-center" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('value')}</label>
-                  <input name="value" type="number" step="0.01" required defaultValue={editingTransaction?.value || ""} className="font-black text-[13px] py-3 px-5 min-h-[50px]" />
+                  <input name="value" type="number" step="0.01" required defaultValue={editingTransaction?.value || ""} className="font-black text-[13px] py-3 px-5" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('category')}</label>
-                  <select name="categoryId" required value={modalCategoryId} onChange={(e) => setModalCategoryId(e.target.value)} className="font-bold py-3 px-5 text-[13px] flex-1 min-h-[50px] appearance-none">
+                  <div className="flex justify-between items-center ml-1">
+                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{t('category')}</label>
+                    <button type="button" onClick={() => setQuickAddType('category')} className="text-[#FF385C] hover:opacity-70"><Plus size={14}/></button>
+                  </div>
+                  <select required value={modalCategoryId} onChange={(e) => setModalCategoryId(e.target.value)} className="font-bold py-3 px-5 text-[13px] appearance-none">
                     {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>)}
                   </select>
                 </div>
@@ -439,16 +407,31 @@ const MonthlyControl: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('paymentMethod')}</label>
-                  <select name="paymentMethod" required value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="font-bold py-3 px-5 text-[13px] min-h-[50px] appearance-none">
+                  <select required value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="font-bold py-3 px-5 text-[13px] appearance-none">
                     {PAYMENT_METHODS.map(m => <option key={m} value={m}>{t(m)}</option>)}
                   </select>
                 </div>
                 {paymentMethod === 'Crédito' && (
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">{t('card')}</label>
-                    <select name="cardId" defaultValue={editingTransaction?.cardId || ""} className="flex-1 py-3 px-5 text-[13px] min-h-[50px] appearance-none">
+                  <div className="space-y-1.5 animate-in slide-in-from-top-1 duration-200">
+                    <div className="flex justify-between items-center ml-1">
+                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{t('card')}</label>
+                      <button type="button" onClick={() => setQuickAddType('card')} className="text-[#FF385C] hover:opacity-70"><Plus size={14}/></button>
+                    </div>
+                    <select required value={modalCardId} onChange={(e) => setModalCardId(e.target.value)} className="font-bold py-3 px-5 text-[13px] appearance-none">
                       <option value="">{t('select')}</option>
                       {cards.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                )}
+                {paymentMethod !== 'Crédito' && (
+                   <div className="space-y-1.5">
+                    <div className="flex justify-between items-center ml-1">
+                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{t('goals')}</label>
+                      <button type="button" onClick={() => setQuickAddType('goal')} className="text-[#FF385C] hover:opacity-70"><Plus size={14}/></button>
+                    </div>
+                    <select value={modalGoalId} onChange={(e) => setModalGoalId(e.target.value)} className="font-bold py-3 px-5 text-[13px] appearance-none">
+                      <option value="">{t('select')}</option>
+                      {goals.map(g => <option key={g.id} value={g.id}>{g.icon} {g.name}</option>)}
                     </select>
                   </div>
                 )}
@@ -460,6 +443,70 @@ const MonthlyControl: React.FC = () => {
               </div>
 
               <button type="submit" className="primary-btn w-full py-4 text-[13px] mt-2 shadow-xl active:scale-95 transition-all">{t('save')}</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Add Modals */}
+      {quickAddType === 'category' && (
+        <div className="fixed inset-0 bg-black/40 z-[110] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-[24px] w-full max-w-sm p-6 shadow-2xl animate-in zoom-in duration-200 relative">
+            <button onClick={() => setQuickAddType(null)} className="absolute right-4 top-4 p-1 text-gray-400 hover:text-black"><X size={20}/></button>
+            <h3 className="font-black mb-4 uppercase text-xs tracking-tight">Nova Categoria</h3>
+            <form onSubmit={handleQuickAddCategory} className="space-y-4">
+              <input name="name" required placeholder="Nome da Categoria" />
+              <div className="space-y-1">
+                <label className="text-[8px] font-black text-gray-400 uppercase ml-1">Ícone</label>
+                <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-2 bg-gray-50 rounded-xl">
+                  {EMOJIS.map(e => <button key={e} type="button" onClick={(ev) => (ev.currentTarget.parentElement?.parentElement?.nextElementSibling as HTMLInputElement).value = e} className="w-8 h-8 hover:bg-gray-200 rounded-lg">{e}</button>)}
+                </div>
+                <input name="icon" defaultValue="🤷" required className="hidden" />
+              </div>
+              <button type="submit" className="primary-btn w-full">Criar</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {quickAddType === 'card' && (
+        <div className="fixed inset-0 bg-black/40 z-[110] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-[24px] w-full max-w-sm p-6 shadow-2xl animate-in zoom-in duration-200 relative">
+            <button onClick={() => setQuickAddType(null)} className="absolute right-4 top-4 p-1 text-gray-400 hover:text-black"><X size={20}/></button>
+            <h3 className="font-black mb-4 uppercase text-xs tracking-tight">Novo Cartão</h3>
+            <form onSubmit={handleQuickAddCard} className="space-y-3">
+              <input name="name" required placeholder="Nome do Cartão" />
+              <input name="bank" required placeholder="Banco" />
+              <div className="grid grid-cols-2 gap-2">
+                <input name="limit" type="number" required placeholder="Limite" />
+                <input name="closingDay" type="number" required placeholder="Dia Vencimento" />
+              </div>
+              <div className="flex gap-2 p-2 bg-gray-50 rounded-xl">
+                {CARD_COLORS.map(c => <button key={c} type="button" onClick={(ev) => (ev.currentTarget.parentElement?.nextElementSibling as HTMLInputElement).value = c} className="w-6 h-6 rounded-full border border-white" style={{backgroundColor: c}} />)}
+              </div>
+              <input name="color" defaultValue="#222222" className="hidden" />
+              <button type="submit" className="primary-btn w-full">Criar</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {quickAddType === 'goal' && (
+        <div className="fixed inset-0 bg-black/40 z-[110] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-[24px] w-full max-w-sm p-6 shadow-2xl animate-in zoom-in duration-200 relative">
+            <button onClick={() => setQuickAddType(null)} className="absolute right-4 top-4 p-1 text-gray-400 hover:text-black"><X size={20}/></button>
+            <h3 className="font-black mb-4 uppercase text-xs tracking-tight">Nova Meta</h3>
+            <form onSubmit={handleQuickAddGoal} className="space-y-4">
+              <input name="name" required placeholder="Ex: Viagem Disney" />
+              <input name="targetValue" type="number" required placeholder="Valor da Meta" />
+              <div className="space-y-1">
+                <label className="text-[8px] font-black text-gray-400 uppercase ml-1">Símbolo</label>
+                <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-2 bg-gray-50 rounded-xl">
+                   {['🎯', '✈️', '🚗', '🏠', '💍', '💻', '💰'].map(e => <button key={e} type="button" onClick={(ev) => (ev.currentTarget.parentElement?.parentElement?.nextElementSibling as HTMLInputElement).value = e} className="w-8 h-8 hover:bg-gray-200 rounded-lg">{e}</button>)}
+                </div>
+                <input name="icon" defaultValue="🎯" className="hidden" />
+              </div>
+              <button type="submit" className="primary-btn w-full">Criar</button>
             </form>
           </div>
         </div>
